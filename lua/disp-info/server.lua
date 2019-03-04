@@ -1,8 +1,9 @@
-﻿-- Disp-Info (addon for Metrostroi)
+﻿﻿-- Disp-Info (addon for Metrostroi)
 -- Автор: Alexell
 -- Steam: https://steamcommunity.com/id/alexell/
 
-cur_dis = "нету"
+if CLIENT then return end
+cur_dis = "отсутствует"
 cur_int = "2:00"
 
 function dispinfo.disp(ply)
@@ -18,9 +19,19 @@ function dispinfo.setdisp(ply,target)
 end
 
 function dispinfo.undisp(ply)
-	local msg = "игрок "..cur_dis.." покинул пост Диспетчера в "..os.date("%H:%M").."."
-	cur_dis = "нету"
-	ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
+	if cur_dis == ply:Nick() then
+		local msg = "игрок "..cur_dis.." покинул пост Диспетчера в "..os.date("%H:%M").."."
+		cur_dis = "отсутствует"
+		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
+	else
+		if (ply:IsAdmin()) then
+			local msg = ply:Nick().."снял игрока "..cur_dis.." с поста Диспетчера в "..os.date("%H:%M").."."
+			cur_dis = "отсутствует"
+			ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
+		else
+			ply:PrintMessage(HUD_PRINTTALK,"Вы не можете покинуть пост, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
+		end
+	end
 end
 
 function dispinfo.setint(ply,mins)
@@ -28,12 +39,14 @@ function dispinfo.setint(ply,mins)
 		cur_int = mins
 		local msg = "Диспетчер установил интервал движения "..cur_int
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
+	else
+		ply:PrintMessage(HUD_PRINTTALK,"Вы не можете изменить интервал, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
 	end
 end
 
 hook.Add( "PlayerDisconnected", "PlyDisconnect", function(ply) --снимаем с поста при отключении
 	if cur_dis == ply:Nick() then
-		cur_dis = "нету"
+		cur_dis = "отсутствует"
 		local msg = "игрок "..ply:Nick().." покинул пост Диспетчера в "..os.date("%H:%M").." (отключился с сервера)."
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	end

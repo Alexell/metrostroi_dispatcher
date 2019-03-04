@@ -10,7 +10,7 @@ weight = 600
 } )
 
 local ply = LocalPlayer()
-local dis_nick = "нету"
+local dis_nick = "отсутствует"
 local dis_int = "2:00"
 
 local function receivedata(um)
