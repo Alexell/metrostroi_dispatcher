@@ -23,3 +23,9 @@
 * ULib
 
 **Установка:**
+
+* Добавить в коллекцию сервера: https://steamcommunity.com/sharedfiles/filedetails/?id=1673097502
+
+или
+
+* распаковать [это](https://github.com/Alexell/disp-info/releases/download/v1.0/disp-info.zip) в **garrysmod\addons** на вашем сервере
