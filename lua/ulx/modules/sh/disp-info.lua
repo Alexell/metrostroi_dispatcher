@@ -18,8 +18,8 @@ timer.Simple(1,function()
 		undisp:help("Освободить пост ДЦХ.")
 
 		local setint = ulx.command(dispinfo.category, "ulx setint", dispinfo.setint, "!int")
-		setint:addParam{ type=ULib.cmds.StringArg, hint="2:30",ULib.cmds.optional}
+		setint:addParam{ type=ULib.cmds.StringArg, hint="2.30",ULib.cmds.optional}
 		setint:defaultAccess(ULib.ACCESS_SUPERADMIN)
-		setint:help("Установить интервал движения. Формат - мин:сек")
+		setint:help("Установить интервал движения. Формат - мин.сек")
 	end
 end)

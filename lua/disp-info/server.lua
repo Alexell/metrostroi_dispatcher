@@ -4,7 +4,7 @@
 
 if CLIENT then return end
 cur_dis = "отсутствует"
-cur_int = "2:00"
+cur_int = "2.00"
 
 function dispinfo.disp(ply)
 	cur_dis = ply:Nick()
