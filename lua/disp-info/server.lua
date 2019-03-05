@@ -1,8 +1,7 @@
-﻿﻿-- Disp-Info (addon for Metrostroi)
+﻿-- Disp-Info (addon for Metrostroi)
 -- Автор: Alexell
 -- Steam: https://steamcommunity.com/id/alexell/
 
-if CLIENT then return end
 cur_dis = "отсутствует"
 cur_int = "2.00"
 

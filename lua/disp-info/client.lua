@@ -1,4 +1,4 @@
-﻿-- Disp-Info (addon for Metrostroi)
+-- Disp-Info (addon for Metrostroi)
 -- Автор: Alexell
 -- Steam: https://steamcommunity.com/id/alexell/
 
