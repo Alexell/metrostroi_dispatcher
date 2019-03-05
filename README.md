@@ -24,8 +24,8 @@
 
 **Установка:**
 
-* Добавить в коллекцию сервера: https://steamcommunity.com/sharedfiles/filedetails/?id=1673097502
+* Добавить в коллекцию сервера: https://steamcommunity.com/sharedfiles/filedetails/?id=1673775394
 
 или
 
-* распаковать [это](https://github.com/Alexell/disp-info/releases/download/v1.0/disp-info.zip) в **garrysmod\addons** на вашем сервере
+* распаковать [архив с нужной версией](https://github.com/Alexell/disp-info/releases) в **garrysmod\addons** на вашем сервере
