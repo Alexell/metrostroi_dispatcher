@@ -1,7 +1,8 @@
-﻿-- Disp-Info (addon for Metrostroi)
+﻿﻿-- Disp-Info (addon for Metrostroi)
 -- Автор: Alexell
 -- Steam: https://steamcommunity.com/id/alexell/
 
+if CLIENT then return end
 cur_dis = "отсутствует"
 cur_int = "2.00"
 
@@ -18,24 +19,28 @@ function dispinfo.setdisp(ply,target)
 end
 
 function dispinfo.undisp(ply)
-	if cur_dis == ply:Nick() then
-		local msg = "игрок "..cur_dis.." покинул пост Диспетчера в "..os.date("%H:%M").."."
-		cur_dis = "отсутствует"
-		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
-	else
-		if (ply:IsAdmin()) then
-			local msg = ply:Nick().."снял игрока "..cur_dis.." с поста Диспетчера в "..os.date("%H:%M").."."
+	if cur_dis != "отсутствует" then
+		if cur_dis == ply:Nick() then
+			local msg = "игрок "..cur_dis.." покинул пост Диспетчера в "..os.date("%H:%M").."."
 			cur_dis = "отсутствует"
 			ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		else
-			ply:PrintMessage(HUD_PRINTTALK,"Вы не можете покинуть пост, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
+			if (ply:IsAdmin()) then
+				local msg = ply:Nick().." снял игрока "..cur_dis.." с поста Диспетчера в "..os.date("%H:%M").."."
+				cur_dis = "отсутствует"
+				ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
+			else
+				ply:PrintMessage(HUD_PRINTTALK,"Вы не можете покинуть пост, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
+			end
 		end
+	else
+		ply:PrintMessage(HUD_PRINTTALK,"Диспетчер на посту отсутствует!")
 	end
 end
 
 function dispinfo.setint(ply,mins)
 	if cur_dis == ply:Nick() then
-		cur_int = mins
+		cur_int = string.Replace(mins,":",".")
 		local msg = "Диспетчер установил интервал движения "..cur_int
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	else
