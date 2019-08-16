@@ -14,6 +14,9 @@ if map:find("gm_mustox_neocrimson_line") then cur_int = "1.40" end
 if map:find("gm_smr_first_line") then cur_int = "4.00" end
 if map:find("gm_metro_crossline") then cur_int = "2.30" end
 if map:find("gm_mus_loopline") then cur_int = "3.30" end
+if map:find("gm_metro_surfacemetro") then cur_int = "1.45" end
+if map:find("gm_mus_neoorange") then cur_int = "1.50" end
+if map:find("gm_metro_virus_v1") then cur_int = "2.20" end
 
 function dispinfo.disp(ply)
 	cur_dis = ply:Nick()
