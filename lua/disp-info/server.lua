@@ -4,6 +4,7 @@
 
 if CLIENT then return end
 cur_dis = "отсутствует"
+str_int = "Мин. интервал"
 cur_int = "2.00"
 
 -- проверенные интервалы по картам
@@ -58,6 +59,7 @@ end
 function dispinfo.setint(ply,mins)
 	if cur_dis == ply:Nick() then
 		cur_int = string.Replace(mins,":",".")
+		str_int = "Интервал движения"
 		local msg = "Диспетчер "..cur_dis.." установил интервал движения "..cur_int
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		hook.Run("DispInfoSetInt",cur_dis,cur_int)
@@ -80,6 +82,7 @@ function dispinfo.updater(ply)
 		if (not ply or ply == v) then
 			umsg.Start("DispInfoUpdater",v)
 				umsg.String(cur_dis)
+				umsg.String(str_int)
 				umsg.String(cur_int)
 			umsg.End()
 		end
