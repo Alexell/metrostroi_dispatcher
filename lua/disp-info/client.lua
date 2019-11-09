@@ -2,29 +2,62 @@
 -- Автор: Alexell
 -- Steam: https://steamcommunity.com/id/alexell/
 
-surface.CreateFont( "Font", {
+surface.CreateFont("DispMain",{
 font = "Trebuchet Bold",
 extended = false,
 size = 17,
 weight = 600
-} )
+})
 
 local ply = LocalPlayer()
 local dis_nick = "отсутствует"
 local str_int = "Мин. интервал"
-local dis_int = "2.00"
+local dis_int = "1.45"
 
-local function receivedata(um)
-	dis_nick = um:ReadString()
-	str_int = um:ReadString()
-	dis_int = um:ReadString()
+local function DispInfoInit()
+	if DispInfo.Panel then
+		DispInfo.Panel:Remove()
+		DispInfo.Panel = nil
+	end
+	DispInfo.Panel = vgui.Create("DispInfoPanel")
+	hook.Remove("InitPostEntity","DispInfo.Init")
 end
-usermessage.Hook("DispInfoUpdater", receivedata)
+hook.Add("InitPostEntity","DispInfo.Init",DispInfoInit)
 
-function DrawHUD()
-	local ply = LocalPlayer()
-    draw.RoundedBox(10, ScrW()-250, ScrH()-(ScrH()/2)-100,250,70,Color(0,0,0,80))
-    draw.SimpleText("Диспетчер: "..dis_nick,"Font",ScrW()-230,ScrH()-(ScrH()/2)-90,Color(255,255,255,255),TEXT_ALIGN_LEFT)
-    draw.SimpleText(str_int..": "..dis_int,"Font",ScrW()-230,ScrH()-(ScrH()/2)-60,Color(255,255,255,255),TEXT_ALIGN_LEFT)
+net.Receive("DispInfo.ServerData",function()
+	dis_nick = net.ReadString()
+	str_int = net.ReadString()
+	dis_int = net.ReadString()
+	
+	if DispInfo.Panel == nil or not IsValid(LocalPlayer()) then return end
+	if (IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "gmod_camera") then
+		DispInfo.Panel:SetVisible(false)
+	else
+		DispInfo.Panel:SetVisible(true)
+	end
+	DispInfo.Panel.Disp:SetText("Диспетчер: "..dis_nick)
+	DispInfo.Panel.Int:SetText(str_int..": "..dis_int)
+end)
+
+local DP = {}
+
+function DP:Init()
+	self.Disp = vgui.Create("DLabel",self)
+	self.Disp:SetFont("DispMain")
+	self.Int = vgui.Create("DLabel",self)
+	self.Int:SetFont("DispMain")
 end
-hook.Add('HUDPaint','DisHUD',DrawHUD)
+
+function DP:Paint(w,h)
+	draw.RoundedBox(5,0,0,w,h,Color(0,0,0,150))
+end
+
+function DP:PerformLayout()
+	self:SetSize(250,50)
+	self:SetPos(ScrW() - self:GetWide() - 5,ScrH() - (ScrH()/2) - (self:GetTall()/2))
+	self.Disp:SetPos(10,5)
+	self.Disp:SetWide(240)
+	self.Int:SetWide(240)
+	self.Int:SetPos(10,25)
+end
+vgui.Register("DispInfoPanel",DP,"Panel")

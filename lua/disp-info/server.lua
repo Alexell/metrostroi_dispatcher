@@ -3,41 +3,46 @@
 -- Steam: https://steamcommunity.com/id/alexell/
 
 if CLIENT then return end
-cur_dis = "отсутствует"
-str_int = "Мин. интервал"
-cur_int = "1.45"
+util.AddNetworkString("DispInfo.ServerData")
+local cur_dis = "отсутствует"
+local str_int = "Мин. интервал"
+local cur_int = "1.45"
 
 -- проверенные интервалы по картам
 local map = game.GetMap()
 if map:find("gm_smr_first_line") then cur_int = "3.00" end
 if map:find("gm_mus_loopline") then cur_int = "3.00" end
 
-function dispinfo.disp(ply)
+function DispInfo.disp(ply)
 	cur_dis = ply:Nick()
 	local msg = "игрок "..cur_dis.." заступил на пост Диспетчера."
 	ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	hook.Run("DispInfoTookPost",cur_dis)
 end
 
-function dispinfo.setdisp(ply,target)
+function DispInfo.setdisp(ply,target)
 	cur_dis = target:Nick()
 	local msg = "игрок "..cur_dis.." заступил на пост Диспетчера."
 	ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	hook.Run("DispInfoTookPost",cur_dis)
 end
 
-function dispinfo.undisp(ply)
+function DispInfo.undisp(ply)
 	if cur_dis != "отсутствует" then
 		if cur_dis == ply:Nick() then
 			hook.Run("DispInfoFreedPost",cur_dis)
 			local msg = "игрок "..cur_dis.." покинул пост Диспетчера."
 			cur_dis = "отсутствует"
+			str_int = "Мин. интервал"
+			cur_int = "1.45"
 			ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		else
 			if (ply:IsAdmin()) then
 				hook.Run("DispInfoFreedPost",cur_dis)
 				local msg = ply:Nick().." снял игрока "..cur_dis.." с поста Диспетчера."
 				cur_dis = "отсутствует"
+				str_int = "Мин. интервал"
+				cur_int = "1.45"
 				ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 			else
 				ply:PrintMessage(HUD_PRINTTALK,"Вы не можете покинуть пост, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
@@ -49,7 +54,7 @@ function dispinfo.undisp(ply)
 	end
 end
 
-function dispinfo.setint(ply,mins)
+function DispInfo.setint(ply,mins)
 	if cur_dis == ply:Nick() then
 		cur_int = string.Replace(mins,":",".")
 		str_int = "Интервал движения"
@@ -65,20 +70,18 @@ hook.Add( "PlayerDisconnected", "PlyDisconnect", function(ply) --снимаем 
 	if cur_dis == ply:Nick() then
 		hook.Run("DispInfoFreedPost",cur_dis)
 		cur_dis = "отсутствует"
+		str_int = "Мин. интервал"
+		cur_int = "1.45"
 		local msg = "игрок "..ply:Nick().." покинул пост Диспетчера (отключился с сервера)."
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	end
 end)
 
-function dispinfo.updater(ply)
-	for k,v in pairs(player.GetAll()) do
-		if (not ply or ply == v) then
-			umsg.Start("DispInfoUpdater",v)
-				umsg.String(cur_dis)
-				umsg.String(str_int)
-				umsg.String(cur_int)
-			umsg.End()
-		end
-	end
+local function Updater()
+	net.Start("DispInfo.ServerData")
+		net.WriteString(cur_dis)
+		net.WriteString(str_int)
+		net.WriteString(cur_int)
+	net.Broadcast()
 end
-timer.Create("UpdateCurValues",1,0,dispinfo.updater)
+timer.Create("UpdateCurValues",1,0,Updater)
