@@ -35,8 +35,10 @@ net.Receive("DispInfo.ServerData",function()
 	else
 		DispInfo.Panel:SetVisible(true)
 	end
-	DispInfo.Panel.Disp:SetText("Диспетчер: "..dis_nick)
-	DispInfo.Panel.Int:SetText(str_int..": "..dis_int)
+	if DispInfo.Panel then
+		DispInfo.Panel.Disp:SetText("Диспетчер: "..dis_nick)
+		DispInfo.Panel.Int:SetText(str_int..": "..dis_int)
+	end
 end)
 
 local DP = {}
