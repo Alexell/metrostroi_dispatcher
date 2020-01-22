@@ -4,6 +4,8 @@
 
 **Website:** https://alexell.ru/
 
+![Dispatcher Info](https://mss.community/images/addons/disp-info.jpg)
+
 **Описание:**
 
 Серверный аддон, который добавляет в правой части экрана небольшую панель для отображения диспетчера на посту, а также интервала движения.
