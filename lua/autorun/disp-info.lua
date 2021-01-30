@@ -1,6 +1,6 @@
 -- Disp-Info (addon for Metrostroi)
 -- Автор: Alexell
--- Steam: https://steamcommunity.com/id/alexell/
+-- Steam: https://steamcommunity.com/id/alexellpro/
 
 if game.SinglePlayer() then return end
 DispInfo = DispInfo or {}
