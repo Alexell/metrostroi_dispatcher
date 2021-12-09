@@ -1,6 +1,9 @@
--- Disp-Info (addon for Metrostroi)
--- Автор: Alexell
--- Steam: https://steamcommunity.com/id/alexellpro/
+--------------------- Disp-Info (addon for Metrostroi) ----------------------
+-- Developer: Alexell | https://steamcommunity.com/profiles/76561198210303223
+-- License: MIT
+-- Source code: https://github.com/Alexell/disp-info
+-----------------------------------------------------------------------------
+CreateClientConVar("disp_showpanel",1,true,false)
 
 surface.CreateFont("DispMain",{
 font = "Trebuchet Bold",
@@ -30,7 +33,7 @@ net.Receive("DispInfo.ServerData",function()
 	dis_int = net.ReadString()
 	
 	if DispInfo.Panel == nil or not IsValid(LocalPlayer()) then return end
-	if (IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "gmod_camera") then
+	if ((GetConVar("disp_showpanel"):GetInt() == 0) or (IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "gmod_camera")) then
 		DispInfo.Panel:SetVisible(false)
 	else
 		DispInfo.Panel:SetVisible(true)

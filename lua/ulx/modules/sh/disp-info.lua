@@ -1,7 +1,8 @@
--- Disp-Info (addon for Metrostroi)
--- Автор: Alexell
--- Steam: https://steamcommunity.com/id/alexellpro/
-
+--------------------- Disp-Info (addon for Metrostroi) ----------------------
+-- Developer: Alexell | https://steamcommunity.com/profiles/76561198210303223
+-- License: MIT
+-- Source code: https://github.com/Alexell/disp-info
+-----------------------------------------------------------------------------
 local CATEGORY_NAME = "Metrostroi"
 
 function ulx.disp(calling_ply)
