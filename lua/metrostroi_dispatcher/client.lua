@@ -1,11 +1,11 @@
---------------------- Disp-Info (addon for Metrostroi) ----------------------
+--------------------------- Metrostroi Dispatcher ---------------------------
 -- Developer: Alexell | https://steamcommunity.com/profiles/76561198210303223
 -- License: MIT
--- Source code: https://github.com/Alexell/disp-info
+-- Source code: https://github.com/Alexell/metrostroi_dispatcher
 -----------------------------------------------------------------------------
 CreateClientConVar("disp_showpanel",1,true,false)
 
-surface.CreateFont("DispMain",{
+surface.CreateFont("MDispMain",{
 font = "Trebuchet Bold",
 extended = false,
 size = 17,
@@ -17,47 +17,47 @@ local dis_nick = "отсутствует"
 local str_int = "Мин. интервал"
 local dis_int = "1.45"
 
-local function DispInfoInit()
-	if DispInfo.Panel then
-		DispInfo.Panel:Remove()
-		DispInfo.Panel = nil
+local function MDispatcherInit()
+	if MDispatcher.DPanel then
+		MDispatcher.DPanel:Remove()
+		MDispatcher.DPanel = nil
 	end
-	DispInfo.Panel = vgui.Create("DispInfoPanel")
-	hook.Remove("InitPostEntity","DispInfo.Init")
+	MDispatcher.DPanel = vgui.Create("MDispatcher.DispPanel")
+	hook.Remove("InitPostEntity","MDispatcher.Init")
 end
-hook.Add("InitPostEntity","DispInfo.Init",DispInfoInit)
+hook.Add("InitPostEntity","MDispatcher.Init",MDispatcherInit)
 
-net.Receive("DispInfo.ServerData",function()
+net.Receive("MDispatcher.ServerData",function()
 	dis_nick = net.ReadString()
 	str_int = net.ReadString()
 	dis_int = net.ReadString()
 	
-	if DispInfo.Panel == nil or not IsValid(LocalPlayer()) then return end
+	if MDispatcher.DPanel == nil or not IsValid(LocalPlayer()) then return end
 	if ((GetConVar("disp_showpanel"):GetInt() == 0) or (IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "gmod_camera")) then
-		DispInfo.Panel:SetVisible(false)
+		MDispatcher.DPanel:SetVisible(false)
 	else
-		DispInfo.Panel:SetVisible(true)
+		MDispatcher.DPanel:SetVisible(true)
 	end
-	if DispInfo.Panel then
-		DispInfo.Panel.Disp:SetText("Диспетчер: "..dis_nick)
-		DispInfo.Panel.Int:SetText(str_int..": "..dis_int)
+	if MDispatcher.DPanel then
+		MDispatcher.DPanel.Disp:SetText("Диспетчер: "..dis_nick)
+		MDispatcher.DPanel.Int:SetText(str_int..": "..dis_int)
 	end
 end)
 
-local DP = {}
+local DispPanel = {}
 
-function DP:Init()
+function DispPanel:Init()
 	self.Disp = vgui.Create("DLabel",self)
-	self.Disp:SetFont("DispMain")
+	self.Disp:SetFont("MDispMain")
 	self.Int = vgui.Create("DLabel",self)
-	self.Int:SetFont("DispMain")
+	self.Int:SetFont("MDispMain")
 end
 
-function DP:Paint(w,h)
+function DispPanel:Paint(w,h)
 	draw.RoundedBox(5,0,0,w,h,Color(0,0,0,150))
 end
 
-function DP:PerformLayout()
+function DispPanel:PerformLayout()
 	self:SetSize(250,50)
 	self:SetPos(ScrW() - self:GetWide() - 5,ScrH() - (ScrH()/2) - (self:GetTall()/2))
 	self.Disp:SetPos(10,5)
@@ -67,4 +67,4 @@ function DP:PerformLayout()
 	self.Int:SetPos(10,25)
 	self.Int:SetTextColor(Color(255,255,255,255))
 end
-vgui.Register("DispInfoPanel",DP,"Panel")
+vgui.Register("MDispatcher.DispPanel",DispPanel,"Panel")

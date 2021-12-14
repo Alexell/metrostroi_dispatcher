@@ -1,11 +1,11 @@
-﻿--------------------- Disp-Info (addon for Metrostroi) ----------------------
+﻿--------------------------- Metrostroi Dispatcher ---------------------------
 -- Developer: Alexell | https://steamcommunity.com/profiles/76561198210303223
 -- License: MIT
--- Source code: https://github.com/Alexell/disp-info
+-- Source code: https://github.com/Alexell/metrostroi_dispatcher
 -----------------------------------------------------------------------------
 
 if CLIENT then return end
-util.AddNetworkString("DispInfo.ServerData")
+util.AddNetworkString("MDispatcher.ServerData")
 local cur_dis = "отсутствует"
 local str_int = "Мин. интервал"
 local cur_int = "1.45"
@@ -15,21 +15,21 @@ local map = game.GetMap()
 if map:find("gm_smr_first_line") then cur_int = "3.00" end
 if map:find("gm_mus_loopline") then cur_int = "3.00" end
 
-function DispInfo.disp(ply)
+function MDispatcher.Disp(ply)
 	cur_dis = ply:Nick()
 	local msg = "игрок "..cur_dis.." заступил на пост Диспетчера."
 	ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	hook.Run("DispInfoTookPost",cur_dis)
 end
 
-function DispInfo.setdisp(ply,target)
+function MDispatcher.SetDisp(ply,target)
 	cur_dis = target:Nick()
 	local msg = "игрок "..cur_dis.." заступил на пост Диспетчера."
 	ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	hook.Run("DispInfoTookPost",cur_dis)
 end
 
-function DispInfo.undisp(ply)
+function MDispatcher.UnDisp(ply)
 	if cur_dis != "отсутствует" then
 		if cur_dis == ply:Nick() then
 			hook.Run("DispInfoFreedPost",cur_dis)
@@ -56,7 +56,7 @@ function DispInfo.undisp(ply)
 	end
 end
 
-function DispInfo.setint(ply,mins)
+function MDispatcher.SetInt(ply,mins)
 	if cur_dis == ply:Nick() then
 		cur_int = string.Replace(mins,":",".")
 		str_int = "Интервал движения"
@@ -80,7 +80,7 @@ hook.Add( "PlayerDisconnected", "PlyDisconnect", function(ply) --снимаем 
 end)
 
 local function Updater()
-	net.Start("DispInfo.ServerData")
+	net.Start("MDispatcher.ServerData")
 		net.WriteString(cur_dis)
 		net.WriteString(str_int)
 		net.WriteString(cur_int)
