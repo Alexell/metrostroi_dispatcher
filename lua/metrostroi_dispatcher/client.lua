@@ -12,10 +12,17 @@ size = 17,
 weight = 600
 })
 
-local ply = LocalPlayer()
 local dis_nick = "отсутствует"
 local str_int = "Мин. интервал"
 local dis_int = "1.45"
+
+local function MDispatcherSetData()
+	if not IsValid(MDispatcher.DPanel) then return end
+	MDispatcher.DPanel.Disp:SetText("Диспетчер: "..dis_nick)
+	MDispatcher.DPanel.Int:SetText(str_int..": "..dis_int)
+	
+	if dis_nick ~= "отсутствует" then RunConsoleCommand("disp_showpanel",1) end
+end
 
 local function MDispatcherInit()
 	if MDispatcher.DPanel then
@@ -23,6 +30,7 @@ local function MDispatcherInit()
 		MDispatcher.DPanel = nil
 	end
 	MDispatcher.DPanel = vgui.Create("MDispatcher.DispPanel")
+	MDispatcherSetData()
 	hook.Remove("InitPostEntity","MDispatcher.Init")
 end
 hook.Add("InitPostEntity","MDispatcher.Init",MDispatcherInit)
@@ -31,17 +39,16 @@ net.Receive("MDispatcher.ServerData",function()
 	dis_nick = net.ReadString()
 	str_int = net.ReadString()
 	dis_int = net.ReadString()
-	
-	if MDispatcher.DPanel == nil or not IsValid(LocalPlayer()) then return end
-	if ((GetConVar("disp_showpanel"):GetInt() == 0) or (IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "gmod_camera")) then
-		MDispatcher.DPanel:SetVisible(false)
-	else
-		MDispatcher.DPanel:SetVisible(true)
+	MDispatcherSetData()
+end)
+
+cvars.AddChangeCallback("disp_showpanel",function(cvar,old,new)
+	if (old == new) then return end
+	if (dis_nick ~= "отсутствует" and not tobool(new)) then
+		LocalPlayer():PrintMessage(HUD_PRINTTALK,"Нельзя скрывать панель, когда диспетчер на посту!")
+		RunConsoleCommand("disp_showpanel",1)
 	end
-	if MDispatcher.DPanel then
-		MDispatcher.DPanel.Disp:SetText("Диспетчер: "..dis_nick)
-		MDispatcher.DPanel.Int:SetText(str_int..": "..dis_int)
-	end
+	MDispatcher.DPanel:SetVisible(tobool(new))
 end)
 
 local DispPanel = {}
@@ -68,3 +75,12 @@ function DispPanel:PerformLayout()
 	self.Int:SetTextColor(Color(255,255,255,255))
 end
 vgui.Register("MDispatcher.DispPanel",DispPanel,"Panel")
+
+timer.Create("MDispatcher.SetVisible",1,0,function()
+	if (not IsValid(MDispatcher.DPanel) or not IsValid(LocalPlayer())) then return end
+	if ((not GetConVar("disp_showpanel"):GetBool()) or (IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "gmod_camera")) then
+		MDispatcher.DPanel:SetVisible(false)
+	else
+		MDispatcher.DPanel:SetVisible(true)
+	end
+end)
