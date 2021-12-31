@@ -4,7 +4,7 @@
 
 **Разработчик:** [Alexell](https://steamcommunity.com/profiles/76561198210303223)
 
-![Dispatcher Info](https://mss.community/images/addons/disp-info.jpg)
+![Dispatcher Info](https://mss-project.org/images/addons/disp-info.jpg)
 
 **Описание:**
 
