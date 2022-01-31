@@ -1,9 +1,11 @@
---------------------------- Metrostroi Dispatcher ---------------------------
--- Developer: Alexell | https://steamcommunity.com/profiles/76561198210303223
+--------------------------- Metrostroi Dispatcher --------------------
+-- Developers:
+-- Alexell | https://steamcommunity.com/profiles/76561198210303223
+-- Agent Smith | https://steamcommunity.com/profiles/76561197990364979
 -- License: MIT
 -- Source code: https://github.com/Alexell/metrostroi_dispatcher
------------------------------------------------------------------------------
-local CATEGORY_NAME = "Metrostroi"
+----------------------------------------------------------------------
+local CATEGORY_NAME = "Metrostroi Dispatcher"
 
 function ulx.disp(calling_ply)
 	MDispatcher.Disp(calling_ply)

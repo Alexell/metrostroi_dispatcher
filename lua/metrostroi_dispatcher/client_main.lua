@@ -1,8 +1,10 @@
---------------------------- Metrostroi Dispatcher ---------------------------
--- Developer: Alexell | https://steamcommunity.com/profiles/76561198210303223
+--------------------------- Metrostroi Dispatcher --------------------
+-- Developers:
+-- Alexell | https://steamcommunity.com/profiles/76561198210303223
+-- Agent Smith | https://steamcommunity.com/profiles/76561197990364979
 -- License: MIT
 -- Source code: https://github.com/Alexell/metrostroi_dispatcher
------------------------------------------------------------------------------
+----------------------------------------------------------------------
 CreateClientConVar("disp_showpanel",1,true,false)
 
 surface.CreateFont("MDispMain",{
@@ -35,7 +37,7 @@ local function MDispatcherInit()
 end
 hook.Add("InitPostEntity","MDispatcher.Init",MDispatcherInit)
 
-net.Receive("MDispatcher.ServerData",function()
+net.Receive("MDispatcher.MainData",function()
 	dis_nick = net.ReadString()
 	str_int = net.ReadString()
 	dis_int = net.ReadString()
