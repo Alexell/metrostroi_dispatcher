@@ -7,6 +7,8 @@
 ----------------------------------------------------------------------
 
 util.AddNetworkString("MDispatcher.MainData")
+MDispatcher.Stations = {}
+
 local cur_dis = "отсутствует"
 local str_int = "Мин. интервал"
 local cur_int = "1.45"
@@ -79,6 +81,149 @@ function MDispatcher.SetInt(ply,mins)
 		ply:PrintMessage(HUD_PRINTTALK,"Вы не можете изменить интервал, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
 	end
 end
+
+local function PLLFix()
+	local already_fixed = false -- фикс повторной сработки во время игры
+	for _, ent in pairs(ents.FindByClass("gmod_track_platform")) do
+		if not IsValid(ent) then continue end
+		
+		-- фикс координат на 158/2
+		if ent.StationIndex == 158 and ent.PlatformIndex == 2 then
+			ent:SetPos(ent:GetPos()+Vector(0,-100,0))
+			ent.PlatformStart = Vector(28.43,14169.9,-6721.3)
+			ent:SetNW2Vector("PlatformStart",ent.PlatformStart)
+			ent.PlatformEnd = Vector(4955.4,14174.3,-6722.9)
+			ent:SetNW2Vector("PlatformEnd",ent.PlatformEnd)
+		end
+		
+		-- отделяем 2 линию
+		if ent.StationIndex > 200 then already_fixed = 1 break end
+		if ent.StationIndex > 156 then
+			ent.StationIndex = ent.StationIndex+100
+			ent:SetNWInt("StationIndex",ent.StationIndex)
+		end
+	end
+	
+	if already_fixed then return end
+	local StationConfig = {}
+	for k,v in pairs(Metrostroi.StationConfigurations) do
+		if not tonumber(k) or k <= 156 then StationConfig[k] = v continue end
+		if k > 156 then StationConfig[k+100] = v end
+	end
+	Metrostroi.StationConfigurations = StationConfig
+	StationConfig = nil
+end
+
+-- название станции по индексу
+local function StationNameByIndex(index)
+	if not Metrostroi.StationConfigurations then return end
+	local StationName
+	for k,v in pairs(Metrostroi.StationConfigurations) do
+		local CurIndex = tonumber(k)
+		if not CurIndex or not istable(v) or not v.names or not istable(v.names) or table.Count(v.names) < 1 then StationName = k else StationName = v.names[1] end
+		if CurIndex == index then return StationName end
+	end
+	return
+end
+
+-- собираем нужную инфу по станциям
+local function BuildStationsTable()
+	local distance = 600
+	local LineID 
+	local Path
+	local StationID
+	local StationNode
+
+	for a, ent in pairs(ents.FindByClass("gmod_track_platform")) do
+		if not IsValid(ent) then continue end
+		-- ищем номер линии (вдруг их две)
+		LineID = math.floor(ent.StationIndex/100)
+		if MDispatcher.Stations[LineID] == nil then MDispatcher.Stations[LineID] = {} end
+		-- ищем путь
+		Path = ent.PlatformIndex
+		-- проверяем и записываем данные о станции
+		if MDispatcher.Stations[LineID][Path] == nil then MDispatcher.Stations[LineID][Path] = {} end
+		StationID = ent.StationIndex
+		if MDispatcher.Stations[LineID][Path][StationID] == nil then MDispatcher.Stations[LineID][Path][StationID] = {} end
+		if not MDispatcher.Stations[LineID][Path][StationID].Name then
+			MDispatcher.Stations[LineID][Path][StationID].Name = StationNameByIndex(ent.StationIndex)
+			StationNode = Metrostroi.GetPositionOnTrack(LerpVector(0.5, ent.PlatformStart, ent.PlatformEnd))
+			StationNode = StationNode[1] and StationNode[1].node1 or {}
+			MDispatcher.Stations[LineID][Path][StationID].Node = StationNode
+			MDispatcher.Stations[LineID][Path][StationID].NodeID = StationNode.id or -1
+			
+			-- фикс для ПЛЛ
+			if game.GetMap():find("jar_pll_remastered") then
+				if LineID == 2 and Path == 1 and StationID == 257 then
+					if MDispatcher.Stations[LineID][Path+1] == nil then MDispatcher.Stations[LineID][Path+1] = {} end
+					if MDispatcher.Stations[LineID][Path+1][StationID] == nil then
+						MDispatcher.Stations[LineID][Path+1][StationID] = MDispatcher.Stations[LineID][Path][StationID]
+					end
+				end
+			end
+		end
+	end
+end
+
+-- получаем ко-во секунд в текущих сутках
+local function ConvertTime()
+	local tbl = os.date("!*t")
+	local converted_time = tbl.hour*3600 + tbl.min*60 + tbl.sec
+	--print(os.date("%X", converted_time))
+	return converted_time
+end
+
+local function RoundSeconds(number)
+    local mod = number % 10
+    if mod < 5 then number = number - mod end
+    if mod > 5 then number = number + (10 - mod) end
+    return number
+end
+
+-- Временный дебаг
+local function PrintDebugInfo()
+	---- DEBUG START ----
+	for a,b in pairs(MDispatcher.Stations) do
+		print("Line: "..a.."\n")
+		for c,d in pairs(b) do
+			print("Path: "..c)
+			for k,v in SortedPairsByMemberValue(d, "NodeID") do
+				print("ID: "..k.."| Name: "..v.Name.." | Node: "..v.NodeID--[[.." | Clock: "..(v.Clock or "Not Founded")]])
+			end
+			print("")
+		end
+		print("------------\n")
+	end
+
+	print("StationConfigurations:")
+	local stationstable = {}
+	for k,v in pairs(Metrostroi.StationConfigurations) do
+		if v.names[name_num] then
+			table.insert(stationstable,{id = tostring(k), name = tostring(v.names[name_num])})
+		else
+			table.insert(stationstable,{id = tostring(k), name = tostring(v.names[1])})
+		end
+	end 
+	table.SortByMember(stationstable, "id",true)
+	timer.Simple(0.1, function() 
+		for k,v in pairs(stationstable) do
+			print(v.id.." - "..v.name)
+		end
+	end)
+	print("------------\n")
+	local tab = MDispatcher.GenerateSimpleSched(802, 1)
+	for k, v in pairs(tab) do
+		human_time = os.date("%X", v.Time)
+		print(v.Name:sub(1,18)..": "..human_time)
+	end
+	---- DEBUG END ----
+end
+
+-- таймеры
+if game.GetMap():find("jar_pll_remastered") then timer.Simple(0.1,PLLFix) end
+timer.Simple(2,BuildStationsTable)
+timer.Simple(4,PrintDebugInfo)
+
 
 hook.Add("PlayerDisconnected","MDispatcher.Disconnect",function(ply) -- снимаем с поста при отключении
 	if cur_dis == ply:Nick() then
