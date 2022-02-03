@@ -180,6 +180,36 @@ local function RoundSeconds(number)
     return number
 end
 
+-- генерируем расписание
+function MDispatcher.GenerateSimpleSched(station_id,path)
+	local line_id = math.floor(station_id/100)
+	local init_time = ConvertTime()
+	local init_node = MDispatcher.Stations[line_id][path][station_id].Node
+	local sched_massiv = {}
+	local travel_time 
+	local station_time = 50
+	local full_time = 0
+	local i = 0
+	for k, v in SortedPairsByMemberValue(MDispatcher.Stations[line_id][path], "NodeID") do
+		if v.NodeID < init_node.id then continue end
+		i = i + 1
+		if v.NodeID == init_node.id then  
+			travel_time = station_time*i
+			table.insert(sched_massiv, {Name = v.Name, Time = RoundSeconds(init_time + travel_time)})
+		end
+		if v.NodeID > init_node.id then	
+			travel_time = Metrostroi.GetTravelTime(init_node,v.Node) + station_time*i
+			if i == #MDispatcher.Stations[line_id][path] then 
+				travel_time = Metrostroi.GetTravelTime(init_node,v.Node) + (station_time*i - station_time/2)
+				full_time = travel_time
+			end
+			table.insert(sched_massiv, {Name = v.Name, Time = RoundSeconds(init_time + travel_time)})
+		end
+	end
+	full_time = os.date("%M:%S", RoundSeconds(full_time))
+	return sched_massiv, full_time
+end
+
 -- Временный дебаг
 local function PrintDebugInfo()
 	---- DEBUG START ----
@@ -236,3 +266,7 @@ hook.Add("PlayerDisconnected","MDispatcher.Disconnect",function(ply) -- сним
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	end
 end)
+
+
+
+
