@@ -36,3 +36,34 @@ local setint = ulx.command(CATEGORY_NAME,"ulx setint",ulx.setint,"!int")
 setint:addParam{type=ULib.cmds.StringArg,hint="2.30",ULib.cmds.optional}
 setint:defaultAccess(ULib.ACCESS_SUPERADMIN)
 setint:help("Установить интервал движения. Формат - мин.сек")
+
+function ulx.getsched(calling_ply)
+	if not IsValid(calling_ply) then return end
+    local train = calling_ply:GetTrain()
+	if not IsValid(train) then
+		calling_ply:ChatPrint("Поезд не обнаружен!\nПолучить расписание можно только находясь в кресле машиниста.")
+		return
+	end
+	local station = train:ReadCell(49160)
+	if not Metrostroi.StationConfigurations[station] then
+		calling_ply:ChatPrint("Станция не обнаружена!\nПолучить расписание можно только находясь на станции.")
+		return
+	end
+	local path = train:ReadCell(49168)
+	if path == 0 then
+		calling_ply:ChatPrint("Не удалось получить номер пути!")
+		return
+	end
+	local sched,ftime,btime = MDispatcher.GenerateSimpleSched(station,path)
+	net.Start("MDispatcher.ScheduleData")
+		local tbl = util.Compress(util.TableToJSON(sched))
+		local ln = #tbl
+		net.WriteUInt(ln,32)
+		net.WriteData(tbl,ln)
+		net.WriteString(ftime)
+		net.WriteString(btime)
+	net.Send(calling_ply)
+end
+local getsched = ulx.command(CATEGORY_NAME,"ulx getsched",ulx.getsched,"!sget")
+getsched:defaultAccess(ULib.ACCESS_ALL)
+getsched:help("Получить расписание")

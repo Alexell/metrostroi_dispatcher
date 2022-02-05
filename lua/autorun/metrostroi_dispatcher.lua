@@ -10,7 +10,9 @@
 MDispatcher = MDispatcher or {}
 if SERVER then
 	AddCSLuaFile("metrostroi_dispatcher/client_main.lua")
+	AddCSLuaFile("metrostroi_dispatcher/client_schedule.lua")
 	include("metrostroi_dispatcher/server.lua")
 else
 	include("metrostroi_dispatcher/client_main.lua")
+	include("metrostroi_dispatcher/client_schedule.lua")
 end

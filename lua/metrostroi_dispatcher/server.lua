@@ -7,6 +7,7 @@
 ----------------------------------------------------------------------
 
 util.AddNetworkString("MDispatcher.MainData")
+util.AddNetworkString("MDispatcher.ScheduleData")
 MDispatcher.Stations = {}
 
 local cur_dis = "отсутствует"
