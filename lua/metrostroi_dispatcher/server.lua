@@ -187,27 +187,31 @@ function MDispatcher.GenerateSimpleSched(station_id,path)
 	local init_node = MDispatcher.Stations[line_id][path][station_id].Node
 	local sched_massiv = {}
 	local travel_time 
-	local station_time = 50
+	local station_time = 40
 	local full_time = 0
+	local back_time = 0
 	local i = 0
+	local stc = 0
 	for k, v in SortedPairsByMemberValue(MDispatcher.Stations[line_id][path], "NodeID") do
-		if v.NodeID < init_node.id then continue end
 		i = i + 1
+		if v.NodeID < init_node.id then continue end
+		stc = stc + 1
 		if v.NodeID == init_node.id then  
-			travel_time = station_time*i
-			table.insert(sched_massiv, {Name = v.Name, Time = RoundSeconds(init_time + travel_time)})
+			travel_time = station_time*stc
+			table.insert(sched_massiv, {Name = v.Name, Time = os.date("%X", RoundSeconds(init_time + travel_time))})
 		end
-		if v.NodeID > init_node.id then	
-			travel_time = Metrostroi.GetTravelTime(init_node,v.Node) + station_time*i
-			if i == #MDispatcher.Stations[line_id][path] then 
-				travel_time = Metrostroi.GetTravelTime(init_node,v.Node) + (station_time*i - station_time/2)
+		if v.NodeID > init_node.id then
+			travel_time = Metrostroi.GetTravelTime(init_node,v.Node) + station_time*stc
+			if i == table.Count(MDispatcher.Stations[line_id][path]) then
+				travel_time = Metrostroi.GetTravelTime(init_node,v.Node) + (station_time*stc - station_time/2)
 				full_time = travel_time
 			end
-			table.insert(sched_massiv, {Name = v.Name, Time = RoundSeconds(init_time + travel_time)})
+			table.insert(sched_massiv, {Name = v.Name, Time = os.date("%X", RoundSeconds(init_time + travel_time))})
 		end
 	end
+	back_time = os.date("%X", RoundSeconds(init_time + full_time + 120))
 	full_time = os.date("%M:%S", RoundSeconds(full_time))
-	return sched_massiv, full_time
+	return sched_massiv, full_time, back_time
 end
 
 -- Временный дебаг
@@ -225,7 +229,7 @@ local function PrintDebugInfo()
 		print("------------\n")
 	end
 
-	print("StationConfigurations:")
+	--[[print("StationConfigurations:")
 	local stationstable = {}
 	for k,v in pairs(Metrostroi.StationConfigurations) do
 		if v.names[name_num] then
@@ -245,14 +249,14 @@ local function PrintDebugInfo()
 	for k, v in pairs(tab) do
 		human_time = os.date("%X", v.Time)
 		print(v.Name:sub(1,18)..": "..human_time)
-	end
+	end]]
 	---- DEBUG END ----
 end
 
 -- таймеры
 if game.GetMap():find("jar_pll_remastered") then timer.Simple(0.1,PLLFix) end
-timer.Simple(2,BuildStationsTable)
-timer.Simple(4,PrintDebugInfo)
+timer.Simple(4,BuildStationsTable)
+timer.Simple(6,PrintDebugInfo)
 
 
 hook.Add("PlayerDisconnected","MDispatcher.Disconnect",function(ply) -- снимаем с поста при отключении
