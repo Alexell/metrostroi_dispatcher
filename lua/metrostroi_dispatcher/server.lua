@@ -1,4 +1,4 @@
-﻿--------------------------- Metrostroi Dispatcher --------------------
+--------------------------- Metrostroi Dispatcher --------------------
 -- Developers:
 -- Alexell | https://steamcommunity.com/profiles/76561198210303223
 -- Agent Smith | https://steamcommunity.com/profiles/76561197990364979
@@ -174,44 +174,59 @@ local function ConvertTime()
 	return converted_time
 end
 
+-- округление секунд до 0 и 5
 local function RoundSeconds(number)
     local mod = number % 10
-    if mod < 5 then number = number - mod end
+    if mod < 5 then number = number + (5 - mod) end
     if mod > 5 then number = number + (10 - mod) end
     return number
 end
 
--- генерируем расписание
-function MDispatcher.GenerateSimpleSched(station_id,path)
-	local line_id = math.floor(station_id/100)
-	local init_time = ConvertTime()
-	local init_node = MDispatcher.Stations[line_id][path][station_id].Node
-	local sched_massiv = {}
-	local travel_time 
-	local station_time = 40
-	local full_time = 0
-	local back_time = 0
+-- получаем ID последней станции в порядке следования
+local function GetLastStationID(line_id,path)
 	local i = 0
-	local stc = 0
-	for k, v in SortedPairsByMemberValue(MDispatcher.Stations[line_id][path], "NodeID") do
+	for k,v in SortedPairsByMemberValue(MDispatcher.Stations[line_id][path],"NodeID") do
 		i = i + 1
+		if i == table.Count(MDispatcher.Stations[line_id][path]) then return k end
+	end
+end
+
+-- генерируем расписание (NEW)
+function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
+	local line_id = math.floor(station_start/100)
+	local init_node = MDispatcher.Stations[line_id][path][station_start].Node
+	local prev_node
+	local last_node = station_last and MDispatcher.Stations[line_id][path][station_last].Node or MDispatcher.Stations[line_id][path][GetLastStationID(line_id,path)].Node
+	local sched_massiv = {}
+	local station_time = 40
+	local init_time = ConvertTime() + (station_time/2)
+	local travel_time
+	local hold_time
+	local full_time
+	local back_time
+	
+	for k, v in SortedPairsByMemberValue(MDispatcher.Stations[line_id][path], "NodeID") do
 		if v.NodeID < init_node.id then continue end
-		stc = stc + 1
-		if v.NodeID == init_node.id then  
-			travel_time = station_time*stc
-			table.insert(sched_massiv, {Name = v.Name, Time = os.date("%X", RoundSeconds(init_time + travel_time))})
+		if v.NodeID == init_node.id then
+			travel_time = 0
+			full_time = travel_time
 		end
-		if v.NodeID > init_node.id then
-			travel_time = Metrostroi.GetTravelTime(init_node,v.Node) + station_time*stc
-			if i == table.Count(MDispatcher.Stations[line_id][path]) then
-				travel_time = Metrostroi.GetTravelTime(init_node,v.Node) + (station_time*stc - station_time/2)
-				full_time = travel_time
-			end
-			table.insert(sched_massiv, {Name = v.Name, Time = os.date("%X", RoundSeconds(init_time + travel_time))})
+		if v.NodeID > init_node.id and v.NodeID < last_node.id then
+			if holds and holds[k] then hold_time = holds[k] else hold_time = 0 end
+			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + station_time + hold_time
+			full_time = full_time + travel_time
 		end
+		if v.NodeID == last_node.id then
+			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + (station_time/2)
+			full_time = full_time + travel_time
+			table.insert(sched_massiv, {Name = v.Name, Time = os.date("%X",RoundSeconds(init_time + full_time))})
+			break
+		end
+		table.insert(sched_massiv, {Name = v.Name, Time = os.date("%X",RoundSeconds(init_time + full_time))})
+		prev_node = v.Node
 	end
 	back_time = os.date("%X", RoundSeconds(init_time + full_time + 120))
-	full_time = os.date("%M:%S", RoundSeconds(full_time))
+	full_time = RoundSeconds(full_time)
 	return sched_massiv, full_time, back_time
 end
 

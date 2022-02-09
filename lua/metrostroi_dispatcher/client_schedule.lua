@@ -55,7 +55,7 @@ end
 
 function SchedPanel:Update(sched,ftime,btime)
 	self.Default:SetVisible(false)
-	self.FTime:SetText("Время хода: "..ftime)
+	self.FTime:SetText("Время хода: "..os.date("%M:%S",ftime))
 	self.Stations:Clear()
 	self.Times:Clear()
 	height = 35
@@ -70,6 +70,15 @@ function SchedPanel:Update(sched,ftime,btime)
 	height = height + 34
 	self.Stations:SetSize(110,height)
 	self.Times:SetSize(110,height)
+	timer.Remove("MDispatcher.ResetSchedule")
+	timer.Create("MDispatcher.ResetSchedule",ftime+60,1,function()
+		MDispatcher.SPanel:Remove()
+		MDispatcher.SPanel = nil
+		height = 50
+		timer.Simple(1,function()
+			MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
+		end)
+	end)
 end
 vgui.Register("MDispatcher.SchedulePanel",SchedPanel,"Panel")
 
