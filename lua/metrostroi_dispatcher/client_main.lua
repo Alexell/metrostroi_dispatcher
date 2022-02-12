@@ -100,6 +100,9 @@ local function GetRouteNumber(train)
 	if rnum == 0 then
 		rnum = train:GetNW2Int("RouteNumber:RouteNumber",0)
 	end
+	if rnum == 0 then
+		rnum = train:GetNW2Int("ASNP:RouteNumber",0)
+	end
 	return rnum
 end
 

@@ -1,6 +1,18 @@
 local SchedPanel = {}
 local height = 50
 
+local function ClearScheduleTimer(ntime)
+	timer.Remove("MDispatcher.ClearSchedule")
+	timer.Create("MDispatcher.ClearSchedule",ntime,1,function()
+		MDispatcher.SPanel:Remove()
+		MDispatcher.SPanel = nil
+		height = 50
+		timer.Simple(1,function()
+			MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
+		end)
+	end)
+end
+
 function SchedPanel:Init()
 	self.Stations = vgui.Create("DScrollPanel",self)
 	self.Times = vgui.Create("DScrollPanel",self)
@@ -70,15 +82,7 @@ function SchedPanel:Update(sched,ftime,btime)
 	height = height + 34
 	self.Stations:SetSize(110,height)
 	self.Times:SetSize(110,height)
-	timer.Remove("MDispatcher.ResetSchedule")
-	timer.Create("MDispatcher.ResetSchedule",ftime+60,1,function()
-		MDispatcher.SPanel:Remove()
-		MDispatcher.SPanel = nil
-		height = 50
-		timer.Simple(1,function()
-			MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
-		end)
-	end)
+	ClearScheduleTimer(ftime+60)
 end
 vgui.Register("MDispatcher.SchedulePanel",SchedPanel,"Panel")
 
@@ -88,4 +92,8 @@ net.Receive("MDispatcher.ScheduleData",function()
 	local ft = net.ReadString()
 	local bt = net.ReadString()
 	MDispatcher.SPanel:Update(tbl,ft,bt)
+end)
+
+net.Receive("MDispatcher.ClearSchedule",function()
+	ClearScheduleTimer(1)
 end)

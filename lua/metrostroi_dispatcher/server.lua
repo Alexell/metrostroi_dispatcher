@@ -8,6 +8,7 @@
 
 util.AddNetworkString("MDispatcher.MainData")
 util.AddNetworkString("MDispatcher.ScheduleData")
+util.AddNetworkString("MDispatcher.ClearSchedule")
 MDispatcher.Stations = {}
 
 local cur_dis = "отсутствует"
@@ -81,6 +82,39 @@ function MDispatcher.SetInt(ply,mins)
 	else
 		ply:PrintMessage(HUD_PRINTTALK,"Вы не можете изменить интервал, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
 	end
+end
+
+function MDispatcher.GetSchedule(ply)
+	if not IsValid(ply) then return end
+    local train = ply:GetTrain()
+	if not IsValid(train) then
+		ply:ChatPrint("Поезд не обнаружен!\nПолучить расписание можно только находясь в кресле машиниста.")
+		return
+	end
+	local station = train:ReadCell(49160)
+	if not Metrostroi.StationConfigurations[station] then
+		ply:ChatPrint("Станция не обнаружена!\nПолучить расписание можно только находясь на станции.")
+		return
+	end
+	local path = train:ReadCell(49168)
+	if path == 0 then
+		ply:ChatPrint("Не удалось получить номер пути!")
+		return
+	end
+	local sched,ftime,btime = MDispatcher.GenerateSimpleSched(station,path)
+	net.Start("MDispatcher.ScheduleData")
+		local tbl = util.Compress(util.TableToJSON(sched))
+		local ln = #tbl
+		net.WriteUInt(ln,32)
+		net.WriteData(tbl,ln)
+		net.WriteString(ftime)
+		net.WriteString(btime)
+	net.Send(ply)
+end
+
+function MDispatcher.ClearSchedule(ply)
+	net.Start("MDispatcher.ClearSchedule")
+	net.Send(ply)
 end
 
 local function PLLFix()
@@ -191,7 +225,7 @@ local function GetLastStationID(line_id,path)
 	end
 end
 
--- генерируем расписание (NEW)
+-- генерируем расписание
 function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 	local line_id = math.floor(station_start/100)
 	local init_node = MDispatcher.Stations[line_id][path][station_start].Node
