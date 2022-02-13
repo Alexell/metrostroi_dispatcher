@@ -9,6 +9,8 @@
 util.AddNetworkString("MDispatcher.MainData")
 util.AddNetworkString("MDispatcher.ScheduleData")
 util.AddNetworkString("MDispatcher.ClearSchedule")
+util.AddNetworkString("MDispatcher.DispatcherMenu")
+util.AddNetworkString("MDispatcher.Commands")
 MDispatcher.Stations = {}
 
 local cur_dis = "отсутствует"
@@ -114,6 +116,55 @@ end
 
 function MDispatcher.ClearSchedule(ply)
 	net.Start("MDispatcher.ClearSchedule")
+	net.Send(ply)
+end
+
+net.Receive("MDispatcher.Commands",function(ln,ply)
+	if not IsValid(ply) then return end
+	local comm = net.ReadString()
+	if comm == "" then
+		local st = net.ReadString()
+		for k,v in pairs(MDispatcher.MapPults[game.GetMap()]) do
+			if v[1] == st then
+				ply:SetPos(v[2])
+				ply:SetEyeAngles(v[3])
+			end
+		end
+	elseif comm == "kalin-pult" then
+	end
+end)
+
+local function GetRouteNumber(train)
+	if not IsValid(train) then return end
+	local rnum = train:GetNW2Int("RouteNumber",0)
+	if table.HasValue({"gmod_subway_em508","gmod_subway_81-702","gmod_subway_81-703","gmod_subway_81-705_old","gmod_subway_ezh","gmod_subway_ezh3","gmod_subway_ezh3ru1","gmod_subway_81-717_mvm","gmod_subway_81-718","gmod_subway_81-720","gmod_subway_81-720_1","gmod_subway_81-720a","gmod_subway_81-717_freight"},train:GetClass()) then rnum = rnum / 10 end
+	if rnum == 0 then
+		rnum = train:GetNW2String("RouteNumbera","")
+		if rnum == "" then rnum = 0 end
+	end
+	if rnum == 0 then
+		rnum = train:GetNW2Int("RouteNumber:RouteNumber",0)
+	end
+	if rnum == 0 then
+		rnum = train:GetNW2Int("ASNP:RouteNumber",0)
+	end
+	return rnum
+end
+
+function MDispatcher.DispatcherMenu(ply)
+	local routes = {}
+	for train in pairs(Metrostroi.SpawnedTrains) do
+		if not IsValid(train) then continue end
+		if (train.FrontTrain and train.RearTrain) then continue end
+		local driver = train.Owner:GetName()
+		local route = GetRouteNumber(train)
+		table.insert(routes,{driver,route})
+	end
+	net.Start("MDispatcher.DispatcherMenu")
+		local tbl = util.Compress(util.TableToJSON(routes))
+		local ln = #tbl
+		net.WriteUInt(ln,32)
+		net.WriteData(tbl,ln)
 	net.Send(ply)
 end
 

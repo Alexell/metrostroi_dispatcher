@@ -1,3 +1,10 @@
+--------------------------- Metrostroi Dispatcher --------------------
+-- Developers:
+-- Alexell | https://steamcommunity.com/profiles/76561198210303223
+-- Agent Smith | https://steamcommunity.com/profiles/76561197990364979
+-- License: MIT
+-- Source code: https://github.com/Alexell/metrostroi_dispatcher
+----------------------------------------------------------------------
 local SchedPanel = {}
 local height = 50
 
