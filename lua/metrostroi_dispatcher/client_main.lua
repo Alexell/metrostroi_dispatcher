@@ -6,11 +6,13 @@
 -- Source code: https://github.com/Alexell/metrostroi_dispatcher
 ----------------------------------------------------------------------
 CreateClientConVar("disp_showpanel",1,true,false)
+MDispatcher.Dispatcher = "отсутствует"
+MDispatcher.Interval = "2.00"
 
 surface.CreateFont("MDispMain",{
 font = "Trebuchet Bold",
 extended = false,
-size = 17,
+size = 16,
 weight = 600
 })
 
@@ -28,18 +30,39 @@ size = 14,
 weight = 500
 })
 
-local dis_nick = "отсутствует"
-local str_int = "Мин. интервал"
-local dis_int = "1.45"
-
 local function DPanelSetData()
 	if not IsValid(MDispatcher.DPanel) then return end
-	MDispatcher.DPanel.Disp:SetText("Диспетчер: "..dis_nick)
-	MDispatcher.DPanel.Int:SetText(str_int..": "..dis_int)
-	
-	if dis_nick ~= "отсутствует" then RunConsoleCommand("disp_showpanel",1) end
+	MDispatcher.DPanel.Disp:SetText("Диспетчер: "..MDispatcher.Dispatcher)
+	if MDispatcher.Dispatcher == "отсутствует" then
+		MDispatcher.DPanel.Int:SetText("Интервал движения: "..MDispatcher.Interval.." (авто)")
+	else
+		MDispatcher.DPanel.Int:SetText("Интервал движения: "..MDispatcher.Interval)
+		RunConsoleCommand("disp_showpanel",1)
+	end
 end
 
+net.Receive("MDispatcher.InitialData",function()
+	local ln = net.ReadUInt(32)
+	MDispatcher.ControlRooms = util.JSONToTable(util.Decompress(net.ReadData(ln)))
+	PrintTable(MDispatcher.ControlRooms)
+	MDispatcher.Dispatcher = net.ReadString()
+	MDispatcher.Interval = net.ReadString()
+
+	if MDispatcher.DPanel then
+		MDispatcher.DPanel:Remove()
+		MDispatcher.DPanel = nil
+	end
+	MDispatcher.DPanel = vgui.Create("MDispatcher.DispPanel")
+	DPanelSetData()
+	
+	if MDispatcher.SPanel then
+		MDispatcher.SPanel:Remove()
+		MDispatcher.SPanel = nil
+	end
+	MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
+end)
+
+--[[
 local function MDispatcherInit()
 	if MDispatcher.DPanel then
 		MDispatcher.DPanel:Remove()
@@ -55,12 +78,11 @@ local function MDispatcherInit()
 	MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
 	hook.Remove("InitPostEntity","MDispatcher.Init")
 end
-hook.Add("InitPostEntity","MDispatcher.Init",MDispatcherInit)
+hook.Add("InitPostEntity","MDispatcher.Init",MDispatcherInit)]]
 
-net.Receive("MDispatcher.MainData",function()
-	dis_nick = net.ReadString()
-	str_int = net.ReadString()
-	dis_int = net.ReadString()
+net.Receive("MDispatcher.DispData",function()
+	MDispatcher.Dispatcher = net.ReadString()
+	MDispatcher.Interval = net.ReadString()
 	DPanelSetData()
 end)
 

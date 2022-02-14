@@ -111,7 +111,7 @@ local function DispatcherMenu(routes)
 		setint:SetDisabled(false)
 	end
 	
-	-- ДСЦП
+	-- Блок-посты
 	local dscptitle = vgui.Create("DLabel",dscp_panel)
 	dscptitle:SetPos(5,0)
 	dscptitle:SetSize(230,25)
@@ -119,12 +119,12 @@ local function DispatcherMenu(routes)
 	dscptitle:SetColor(Color(255,255,255))
 	dscptitle:SetText("Быстрое перемещение к пультам:")
 
-	if MDispatcher.MapPults and MDispatcher.MapPults[game.GetMap()] then
+	if MDispatcher.ControlRooms then
 		--if scroll_panel then scroll_panel:Clear() end
 		local scroll_panel = vgui.Create("DScrollPanel",dscp_panel)
 		scroll_panel:SetPos(5,30)
 		local ht = 10
-		for k,v in pairs(MDispatcher.MapPults[game.GetMap()]) do
+		for _,name in pairs(MDispatcher.ControlRooms) do
 			local pnl = scroll_panel:Add("Panel")
 			pnl:Dock(TOP)
 			pnl:SetHeight(25)
@@ -138,10 +138,16 @@ local function DispatcherMenu(routes)
 			plbl:SetFont("MDispSmallTitle")
 			plbl:SetColor(Color(255,255,255))
 			plbl:SetCursor("hand")
-			plbl:SetText(v[1])
+			plbl:SetText(name)
 			plbl:SizeToContents()
 			plbl:SetMouseInputEnabled(true)
 			
+			plbl.DoClick = function()
+				net.Start("MDispatcher.Commands")
+					net.WriteString("cr-teleport")
+					net.WriteString(name)
+				net.SendToServer()
+			end
 			ht = ht + 30
 			scroll_panel:SetSize(415,ht)
 		end
@@ -159,5 +165,5 @@ net.Receive("MDispatcher.DispatcherMenu",function()
 	local ln = net.ReadUInt(32)
 	local tbl = util.JSONToTable(util.Decompress(net.ReadData(ln)))
 	DispatcherMenu(tbl)
-	PrintTable(MDispatcher.MapPults)
+	--PrintTable(MDispatcher.ControlRooms)
 end)

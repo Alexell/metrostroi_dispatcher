@@ -13,6 +13,7 @@ if SERVER then
 	AddCSLuaFile("metrostroi_dispatcher/client_schedule.lua")
 	AddCSLuaFile("metrostroi_dispatcher/client_gui.lua")
 	include("metrostroi_dispatcher/server.lua")
+	include("metrostroi_dispatcher/def_controlrooms.lua")
 else
 	include("metrostroi_dispatcher/client_main.lua")
 	include("metrostroi_dispatcher/client_schedule.lua")

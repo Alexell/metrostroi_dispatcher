@@ -6,65 +6,148 @@
 -- Source code: https://github.com/Alexell/metrostroi_dispatcher
 ----------------------------------------------------------------------
 
-util.AddNetworkString("MDispatcher.MainData")
+util.AddNetworkString("MDispatcher.DispData")
 util.AddNetworkString("MDispatcher.ScheduleData")
 util.AddNetworkString("MDispatcher.ClearSchedule")
 util.AddNetworkString("MDispatcher.DispatcherMenu")
 util.AddNetworkString("MDispatcher.Commands")
-MDispatcher.Stations = {}
+util.AddNetworkString("MDispatcher.InitialData")
 
-local cur_dis = "отсутствует"
-local str_int = "Мин. интервал"
-local cur_int = "1.45"
+MDispatcher.Dispatcher = "отсутствует"
+MDispatcher.Interval = "2.00"
+MDispatcher.Stations = {}
+MDispatcher.ControlRooms = {}
+
+timer.Create("MDispatcher.Init",1,1,function()
+	-- загрузка блок-постов
+	if not file.Exists("mdispatcher_controlrooms.txt","DATA") then
+		file.Write("mdispatcher_controlrooms.txt",MDispatcher.DefControlRooms)
+	end
+	
+	local fl = file.Read("mdispatcher_controlrooms.txt","DATA")
+	local tab = fl and util.JSONToTable(fl) or {}
+	MDispatcher.ControlRooms = tab[game.GetMap()] or {}
+	PrintTable(MDispatcher.ControlRooms)
+	timer.Remove("MDispatcher.Init")
+end)
 
 -- проверенные интервалы по картам
 local map = game.GetMap()
-if map:find("gm_smr_first_line") then cur_int = "3.00" end
-if map:find("gm_mus_loopline") then cur_int = "3.00" end
+if map:find("gm_smr_first_line") then MDispatcher.Interval = "3.00" end
+if map:find("gm_mus_loopline") then MDispatcher.Interval = "3.00" end
 
 local function SendToClients()
-	net.Start("MDispatcher.MainData")
-		net.WriteString(cur_dis)
-		net.WriteString(str_int)
-		net.WriteString(cur_int)
+	net.Start("MDispatcher.DispData")
+		net.WriteString(MDispatcher.Dispatcher)
+		net.WriteString(MDispatcher.Interval)
 	net.Broadcast()
 end
 
+hook.Add("PlayerInitialSpawn","MDispatcher.InitPlayer",function(ply) -- отправляем данные клиенту
+	if not IsValid(ply) then return end
+	local tbl = {}
+	for k,v in pairs(MDispatcher.ControlRooms) do
+		table.insert(tbl,v.Name)
+	end
+	net.Start("MDispatcher.InitialData")
+		tbl = util.Compress(util.TableToJSON(tbl))
+		local ln = #tbl
+		net.WriteUInt(ln,32)
+		net.WriteData(tbl,ln)
+		net.WriteString(MDispatcher.Dispatcher)
+		net.WriteString(MDispatcher.Interval)
+	net.Broadcast()
+end)
+
+hook.Add("PlayerDisconnected","MDispatcher.Disconnect",function(ply) -- снимаем с поста при отключении
+	if not IsValid(ply) then return end
+	if MDispatcher.Dispatcher == ply:Nick() then
+		if not ply:query("ulx disp") then
+			if ply:query("ulx setint") then
+				RunConsoleCommand("ulx","userdenyid",ply:SteamID(),"ulx setint","true")
+			end
+			if ply:query("ulx dispmenu") then
+				RunConsoleCommand("ulx","userdenyid",ply:SteamID(),"ulx dispmenu","true")
+			end
+			if ply:query("ulx undisp") then
+				RunConsoleCommand("ulx","userdenyid",ply:SteamID(),"ulx undisp","true")
+			end
+		end
+		hook.Run("MDispatcher.FreedPost",MDispatcher.Dispatcher)
+		MDispatcher.Dispatcher = "отсутствует"
+		MDispatcher.Interval = "2.00"
+		SendToClients()
+		local msg = "игрок "..ply:Nick().." покинул пост Диспетчера (отключился с сервера)."
+		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
+	end
+end)
+
 function MDispatcher.Disp(ply)
-	cur_dis = ply:Nick()
-	local msg = "игрок "..cur_dis.." заступил на пост Диспетчера."
+	MDispatcher.Dispatcher = ply:Nick()
+	local msg = "игрок "..MDispatcher.Dispatcher.." заступил на пост Диспетчера."
 	ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	SendToClients()
-	hook.Run("MDispatcher.TookPost",cur_dis)
+	hook.Run("MDispatcher.TookPost",MDispatcher.Dispatcher)
 end
 
 function MDispatcher.SetDisp(ply,target)
-	cur_dis = target:Nick()
-	local msg = "игрок "..cur_dis.." заступил на пост Диспетчера."
+	-- временно даем права на меню и смену интервала
+	if not target:query("ulx disp") then
+		if not target:query("ulx setint") then
+			RunConsoleCommand("ulx","userallowid",target:SteamID(),"ulx setint")
+		end
+		if not target:query("ulx dispmenu") then
+			RunConsoleCommand("ulx","userallowid",target:SteamID(),"ulx dispmenu")
+		end
+		if not target:query("ulx undisp") then
+			RunConsoleCommand("ulx","userallowid",target:SteamID(),"ulx undisp")
+		end
+	end
+	
+	MDispatcher.Dispatcher = target:Nick()
+	local msg = "игрок "..MDispatcher.Dispatcher.." заступил на пост Диспетчера."
 	ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	SendToClients()
-	hook.Run("MDispatcher.TookPost",cur_dis)
+	hook.Run("MDispatcher.TookPost",MDispatcher.Dispatcher)
 end
 
 function MDispatcher.UnDisp(ply)
-	if cur_dis != "отсутствует" then
-		if cur_dis == ply:Nick() then
-			hook.Run("MDispatcher.FreedPost",cur_dis)
-			local msg = "игрок "..cur_dis.." покинул пост Диспетчера."
-			cur_dis = "отсутствует"
-			str_int = "Мин. интервал"
-			cur_int = "1.45"
+	if MDispatcher.Dispatcher ~= "отсутствует" then
+		local target
+		for k,v in pairs(player.GetAll()) do
+			if v:Nick() == MDispatcher.Dispatcher then
+				target = v
+				break
+			end
+		end
+		
+		if not target:query("ulx disp") then
+			if target:query("ulx setint") then
+				RunConsoleCommand("ulx","userdenyid",target:SteamID(),"ulx setint","true")
+			end
+			if target:query("ulx dispmenu") then
+				RunConsoleCommand("ulx","userdenyid",target:SteamID(),"ulx dispmenu","true")
+			end
+			if target:query("ulx undisp") then
+				RunConsoleCommand("ulx","userdenyid",target:SteamID(),"ulx undisp","true")
+			end
+		end
+		
+		if MDispatcher.Dispatcher == ply:Nick() then
+			hook.Run("MDispatcher.FreedPost",MDispatcher.Dispatcher)
+			local msg = "игрок "..MDispatcher.Dispatcher.." покинул пост Диспетчера."
+			MDispatcher.Dispatcher = "отсутствует"
+			MDispatcher.Interval = "2.00"
 			ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		else
 			if (ply:IsAdmin()) then
-				hook.Run("MDispatcher.FreedPost",cur_dis)
-				local msg = ply:Nick().." снял игрока "..cur_dis.." с поста Диспетчера."
-				cur_dis = "отсутствует"
-				str_int = "Мин. интервал"
-				cur_int = "1.45"
+				hook.Run("MDispatcher.FreedPost",MDispatcher.Dispatcher)
+				local msg = ply:Nick().." снял игрока "..MDispatcher.Dispatcher.." с поста Диспетчера."
+				MDispatcher.Dispatcher = "отсутствует"
+				MDispatcher.Interval = "2.00"
 				ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 			else
-				ply:PrintMessage(HUD_PRINTTALK,"Вы не можете покинуть пост, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
+				ply:PrintMessage(HUD_PRINTTALK,"Вы не можете покинуть пост, поскольку вы не на посту! Сейчас диспетчер "..MDispatcher.Dispatcher..".")
 			end
 		end
 		SendToClients()
@@ -74,15 +157,14 @@ function MDispatcher.UnDisp(ply)
 end
 
 function MDispatcher.SetInt(ply,mins)
-	if cur_dis == ply:Nick() then
-		cur_int = string.Replace(mins,":",".")
-		str_int = "Интервал движения"
-		local msg = "Диспетчер "..cur_dis.." установил интервал движения "..cur_int
+	if MDispatcher.Dispatcher == ply:Nick() then
+		MDispatcher.Interval = string.Replace(mins,":",".")
+		local msg = "Диспетчер "..MDispatcher.Dispatcher.." установил интервал движения "..MDispatcher.Interval
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		SendToClients()
-		hook.Run("MDispatcher.SetInt",cur_dis,cur_int)
+		hook.Run("MDispatcher.SetInt",MDispatcher.Dispatcher,MDispatcher.Interval)
 	else
-		ply:PrintMessage(HUD_PRINTTALK,"Вы не можете изменить интервал, поскольку вы не на посту! Сейчас диспетчер "..cur_dis..".")
+		ply:PrintMessage(HUD_PRINTTALK,"Вы не можете изменить интервал, поскольку вы не на посту! Сейчас диспетчер "..MDispatcher.Dispatcher..".")
 	end
 end
 
@@ -122,12 +204,13 @@ end
 net.Receive("MDispatcher.Commands",function(ln,ply)
 	if not IsValid(ply) then return end
 	local comm = net.ReadString()
-	if comm == "" then
-		local st = net.ReadString()
-		for k,v in pairs(MDispatcher.MapPults[game.GetMap()]) do
-			if v[1] == st then
-				ply:SetPos(v[2])
-				ply:SetEyeAngles(v[3])
+	if comm == "cr-teleport" then
+		local name = net.ReadString()
+		for k,v in pairs(MDispatcher.ControlRooms) do
+			if v.Name == name then
+				ply:SetPos(v.Pos)
+				ply:SetEyeAngles(v.Ang)
+				break
 			end
 		end
 	elseif comm == "kalin-pult" then
@@ -358,20 +441,3 @@ end
 if game.GetMap():find("jar_pll_remastered") then timer.Simple(0.1,PLLFix) end
 timer.Simple(4,BuildStationsTable)
 timer.Simple(6,PrintDebugInfo)
-
-
-hook.Add("PlayerDisconnected","MDispatcher.Disconnect",function(ply) -- снимаем с поста при отключении
-	if cur_dis == ply:Nick() then
-		hook.Run("MDispatcher.FreedPost",cur_dis)
-		cur_dis = "отсутствует"
-		str_int = "Мин. интервал"
-		cur_int = "1.45"
-		SendToClients()
-		local msg = "игрок "..ply:Nick().." покинул пост Диспетчера (отключился с сервера)."
-		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
-	end
-end)
-
-
-
-
