@@ -1,4 +1,4 @@
---------------------------- Metrostroi Dispatcher --------------------
+------------------------ Metrostroi Dispatcher -----------------------
 -- Developers:
 -- Alexell | https://steamcommunity.com/profiles/76561198210303223
 -- Agent Smith | https://steamcommunity.com/profiles/76561197990364979

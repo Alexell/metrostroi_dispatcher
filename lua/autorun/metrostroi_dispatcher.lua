@@ -1,4 +1,4 @@
---------------------------- Metrostroi Dispatcher --------------------
+------------------------ Metrostroi Dispatcher -----------------------
 -- Developers:
 -- Alexell | https://steamcommunity.com/profiles/76561198210303223
 -- Agent Smith | https://steamcommunity.com/profiles/76561197990364979
@@ -10,12 +10,14 @@
 MDispatcher = MDispatcher or {}
 if SERVER then
 	AddCSLuaFile("metrostroi_dispatcher/client_main.lua")
+	AddCSLuaFile("metrostroi_dispatcher/client_dscp.lua")
 	AddCSLuaFile("metrostroi_dispatcher/client_schedule.lua")
 	AddCSLuaFile("metrostroi_dispatcher/client_gui.lua")
 	include("metrostroi_dispatcher/server.lua")
 	include("metrostroi_dispatcher/def_controlrooms.lua")
 else
 	include("metrostroi_dispatcher/client_main.lua")
+	include("metrostroi_dispatcher/client_dscp.lua")
 	include("metrostroi_dispatcher/client_schedule.lua")
 	include("metrostroi_dispatcher/client_gui.lua")
 end

@@ -1,4 +1,4 @@
---------------------------- Metrostroi Dispatcher --------------------
+------------------------ Metrostroi Dispatcher -----------------------
 -- Developers:
 -- Alexell | https://steamcommunity.com/profiles/76561198210303223
 -- Agent Smith | https://steamcommunity.com/profiles/76561197990364979
@@ -17,17 +17,26 @@ MDispatcher.Dispatcher = "отсутствует"
 MDispatcher.Interval = "2.00"
 MDispatcher.Stations = {}
 MDispatcher.ControlRooms = {}
+MDispatcher.DSCP = {}
 
 timer.Create("MDispatcher.Init",1,1,function()
 	-- загрузка блок-постов
 	if not file.Exists("mdispatcher_controlrooms.txt","DATA") then
 		file.Write("mdispatcher_controlrooms.txt",MDispatcher.DefControlRooms)
+		MDispatcher.DefControlRooms = nil
 	end
 	
 	local fl = file.Read("mdispatcher_controlrooms.txt","DATA")
 	local tab = fl and util.JSONToTable(fl) or {}
 	MDispatcher.ControlRooms = tab[game.GetMap()] or {}
-	PrintTable(MDispatcher.ControlRooms)
+	table.insert(MDispatcher.DSCP,{"Депо","отсутствует"})
+	for k,v in pairs(MDispatcher.ControlRooms) do
+		if not v.Name:find("Депо") and not v.Name:find("депо") then
+			table.insert(MDispatcher.DSCP,{v.Name,"отсутствует"})
+		end
+	end
+	
+	PrintTable(MDispatcher.DSCP)
 	timer.Remove("MDispatcher.Init")
 end)
 
@@ -45,17 +54,26 @@ end
 
 hook.Add("PlayerInitialSpawn","MDispatcher.InitPlayer",function(ply) -- отправляем данные клиенту
 	if not IsValid(ply) then return end
-	local tbl = {}
+	local crooms = {}
+	local dscp = {}
 	for k,v in pairs(MDispatcher.ControlRooms) do
-		table.insert(tbl,v.Name)
+		table.insert(crooms,v.Name)
+	end
+	for k,v in pairs(MDispatcher.DSCP) do
+		table.insert(dscp,v[2])
 	end
 	net.Start("MDispatcher.InitialData")
-		tbl = util.Compress(util.TableToJSON(tbl))
-		local ln = #tbl
+		crooms = util.Compress(util.TableToJSON(crooms))
+		local ln = #crooms
 		net.WriteUInt(ln,32)
-		net.WriteData(tbl,ln)
+		net.WriteData(crooms,ln)
 		net.WriteString(MDispatcher.Dispatcher)
 		net.WriteString(MDispatcher.Interval)
+		
+		dscp = util.Compress(util.TableToJSON(dscp))
+		local ln2 = #dscp
+		net.WriteUInt(ln2,32)
+		net.WriteData(dscp,ln2)
 	net.Broadcast()
 end)
 

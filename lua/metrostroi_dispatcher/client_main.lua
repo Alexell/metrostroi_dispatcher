@@ -1,4 +1,4 @@
---------------------------- Metrostroi Dispatcher --------------------
+------------------------ Metrostroi Dispatcher -----------------------
 -- Developers:
 -- Alexell | https://steamcommunity.com/profiles/76561198210303223
 -- Agent Smith | https://steamcommunity.com/profiles/76561197990364979
@@ -47,6 +47,8 @@ net.Receive("MDispatcher.InitialData",function()
 	PrintTable(MDispatcher.ControlRooms)
 	MDispatcher.Dispatcher = net.ReadString()
 	MDispatcher.Interval = net.ReadString()
+	local ln2 = net.ReadUInt(32)
+	local nicks = util.JSONToTable(util.Decompress(net.ReadData(ln2)))
 
 	if MDispatcher.DPanel then
 		MDispatcher.DPanel:Remove()
@@ -60,25 +62,15 @@ net.Receive("MDispatcher.InitialData",function()
 		MDispatcher.SPanel = nil
 	end
 	MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
+
+	if MDispatcher.DSCPPanel then
+		MDispatcher.DSCPPanel:Remove()
+		MDispatcher.DSCPPanel = nil
+	end
+	MDispatcher.DSCPPanel = vgui.Create("MDispatcher.DSCPPanel")
+	MDispatcher.DSCPPanel:SetControlRooms()
+	MDispatcher.DSCPPanel:Update(nicks)
 end)
-
---[[
-local function MDispatcherInit()
-	if MDispatcher.DPanel then
-		MDispatcher.DPanel:Remove()
-		MDispatcher.DPanel = nil
-	end
-	MDispatcher.DPanel = vgui.Create("MDispatcher.DispPanel")
-	DPanelSetData()
-	
-	if MDispatcher.SPanel then
-		MDispatcher.SPanel:Remove()
-		MDispatcher.SPanel = nil
-	end
-	MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
-	hook.Remove("InitPostEntity","MDispatcher.Init")
-end
-hook.Add("InitPostEntity","MDispatcher.Init",MDispatcherInit)]]
 
 net.Receive("MDispatcher.DispData",function()
 	MDispatcher.Dispatcher = net.ReadString()
@@ -86,8 +78,8 @@ net.Receive("MDispatcher.DispData",function()
 	DPanelSetData()
 end)
 
+-- ДЦХ
 local DispPanel = {}
-
 function DispPanel:Init()
 	self.Disp = vgui.Create("DLabel",self)
 	self.Disp:SetFont("MDispMain")
@@ -101,7 +93,8 @@ end
 
 function DispPanel:PerformLayout()
 	self:SetSize(250,50)
-	self:SetPos(ScrW() - self:GetWide() - 5, ScrH() - (ScrH()/2) - self:GetTall() - 5)
+	--self:SetPos(ScrW() - self:GetWide() - 5, ScrH() - (ScrH()/2) - self:GetTall() - 5)
+	self:SetPos(ScrW() - self:GetWide() - 5, 200)
 	self.Disp:SetPos(10,5)
 	self.Disp:SetTextColor(Color(255,255,255,255))
 	self.Disp:SetWide(240)

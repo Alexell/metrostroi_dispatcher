@@ -1,4 +1,4 @@
---------------------------- Metrostroi Dispatcher --------------------
+------------------------ Metrostroi Dispatcher -----------------------
 -- Developers:
 -- Alexell | https://steamcommunity.com/profiles/76561198210303223
 -- Agent Smith | https://steamcommunity.com/profiles/76561197990364979
@@ -44,14 +44,17 @@ function SchedPanel:PerformLayout()
 	local sb1 = self.Stations:GetVBar()
 	sb1:SetSize(0,0)
 	local sb2 = self.Times:GetVBar()
-	sb2:SetSize(0,0)	
+	sb2:SetSize(0,0)
 
 	self.Default:SetPos(10,25)
 	self.Default:SetWide(200)
 	self.Default:SetText("Нет активного расписания.")
+	self.Default:SetTextColor(Color(255,255,255))
 	self.Route:SetPos(10,5)
 	self.Route:SetWide(110)
+	self.Route:SetTextColor(Color(255,255,255))
 	self.FTime:SetPos(120,5)
+	self.FTime:SetTextColor(Color(255,255,255))
 	self.FTime:SetWide(130)
 	
 end
@@ -61,12 +64,14 @@ function SchedPanel:AddRow(nm,tm,sp)
 	if not sp then lb1:SetFont("MDispSmall")
 	else lb1:SetFont("MDispSmallTitle") end
 	lb1:SetText(nm)
+	lb1:SetTextColor(Color(255,255,255))
 	lb1:Dock(TOP)
 	if not sp then lb1:DockMargin(0,0,0,2)
 	else lb1:DockMargin(0,-4,0,-4) end
 	local lb2 = self.Times:Add("DLabel")
 	lb2:SetFont("MDispSmall")
 	lb2:SetText(tm)
+	lb2:SetTextColor(Color(255,255,255))
 	lb2:Dock(TOP)
 	if not sp then lb2:DockMargin(0,0,0,2)
 	else lb2:DockMargin(0,-4,0,-4) end
@@ -82,13 +87,13 @@ function SchedPanel:Update(sched,ftime,btime)
 		self:AddRow(v.Name,v.Time)
 		height = height + 22
 		self.Stations:SetSize(110,height)
-		self.Times:SetSize(110,height)
+		self.Times:SetSize(110,height) -- должно быть 50, а не 110?
 	end
 	self:AddRow("","",true)
 	self:AddRow("Отправление",btime,true)
 	height = height + 34
 	self.Stations:SetSize(110,height)
-	self.Times:SetSize(110,height)
+	self.Times:SetSize(110,height) -- должно быть 50, а не 110?
 	ClearScheduleTimer(ftime+60)
 end
 vgui.Register("MDispatcher.SchedulePanel",SchedPanel,"Panel")
