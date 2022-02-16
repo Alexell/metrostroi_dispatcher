@@ -122,16 +122,19 @@ local function GetRouteNumber(train)
 end
 
 timer.Create("MDispatcher.SetVisible",1,0,function()
-	if (not IsValid(MDispatcher.DPanel) or not IsValid(MDispatcher.SPanel) or not IsValid(LocalPlayer())) then return end
+	if (not IsValid(MDispatcher.DPanel) or not IsValid(MDispatcher.SPanel) or not IsValid(MDispatcher.DSCPPanel) or not IsValid(LocalPlayer())) then return end
 
 	if (IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "gmod_camera") then
 		MDispatcher.DPanel:SetVisible(false)
 		MDispatcher.SPanel:SetVisible(false)
+		MDispatcher.DSCPPanel:SetVisible(false)
 	else
 		if GetConVar("disp_showpanel"):GetBool() then
 			MDispatcher.DPanel:SetVisible(true)
+			MDispatcher.DSCPPanel:SetVisible(true)
 		else
 			MDispatcher.DPanel:SetVisible(false)
+			MDispatcher.DSCPPanel:SetVisible(false)
 		end
 		if IsValid(LocalPlayer().InMetrostroiTrain) then
 			MDispatcher.SPanel.Route:SetText("Маршрут: "..GetRouteNumber(LocalPlayer().InMetrostroiTrain))

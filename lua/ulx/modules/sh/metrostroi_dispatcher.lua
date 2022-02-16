@@ -23,7 +23,7 @@ setdisp:defaultAccess(ULib.ACCESS_ADMIN)
 setdisp:help("Назначить на пост ДЦХ.")
 
 function ulx.undisp(calling_ply)
-	MDispatcher.UnDisp(calling_ply)
+	MDispatcher.UnDisp(calling_ply,false)
 end
 local undisp = ulx.command(CATEGORY_NAME,"ulx undisp",ulx.undisp,"!undisp")
 undisp:defaultAccess(ULib.ACCESS_ADMIN)
