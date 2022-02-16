@@ -42,7 +42,7 @@ local function DispatcherMenu(routes)
 	
 	tab.OnActiveTabChanged = function(self,old,new)
 		if new:GetText() == "ДЦХ" then frame:SetSize(400,355) end
-		if new:GetText() == "Блок-посты" then frame:SetSize(400,55+cr_height+3) end
+		if new:GetText() == "Блок-посты" then frame:SetSize(400,85+cr_height+3) end
 		tab:SetSize(frame:GetWide(),frame:GetTall())
 		tab:Dock(FILL)
 	end
@@ -230,30 +230,6 @@ local function DispatcherMenu(routes)
 		local scroll_panel = vgui.Create("DScrollPanel",dscp_panel)
 		scroll_panel:SetPos(5,30)
 		cr_height = 10
-		if game.GetMap():find("gm_metro_kalinin") then
-			local pnl = scroll_panel:Add("Panel")
-			pnl:Dock(TOP)
-			pnl:SetHeight(25)
-			pnl:DockMargin(0,0,0,5)
-			pnl.Paint = function(self,w,h)
-				draw.RoundedBox(5,0,0,w,h,Color(134,137,140))
-			end
-			
-			local plbl = vgui.Create("DLabel",pnl)
-			plbl:SetPos(10,5)
-			plbl:SetFont("MDispSmallTitle")
-			plbl:SetColor(Color(255,255,255))
-			plbl:SetCursor("hand")
-			plbl:SetText("Депо (оверлей)")
-			plbl:SizeToContents()
-			plbl:SetMouseInputEnabled(true)
-			
-			plbl.DoClick = function()
-				frame_create() -- функция из Калининской
-			end
-			cr_height = cr_height + 30
-			scroll_panel:SetSize(415,cr_height)
-		end
 		for _,name in pairs(MDispatcher.ControlRooms) do
 			local pnl = scroll_panel:Add("Panel")
 			pnl:Dock(TOP)
@@ -277,6 +253,9 @@ local function DispatcherMenu(routes)
 					net.WriteString("cr-teleport")
 					net.WriteString(name)
 				net.SendToServer()
+				if game.GetMap():find("gm_metro_kalinin") and name == "Депо" then
+					timer.Simple(1,frame_create) -- функция из Калининской
+				end
 			end
 			cr_height = cr_height + 30
 			scroll_panel:SetSize(415,cr_height)

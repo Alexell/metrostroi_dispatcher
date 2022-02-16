@@ -2,6 +2,11 @@ MDispatcher.DefControlRooms = [[
 {
 	"gm_metro_kalinin_v2": [
 		{
+			"Ang": "{0 180 0}",
+			"Pos": "[-5627 -8050 10010]",
+			"Name": "Депо"
+		},
+		{
 			"Ang": "{0 90 0}",
 			"Pos": "[2252.6299 -15256.2373 9330]",
 			"Name": "Новокосино"
