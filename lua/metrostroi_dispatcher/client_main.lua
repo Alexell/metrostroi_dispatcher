@@ -44,7 +44,6 @@ end
 net.Receive("MDispatcher.InitialData",function()
 	local ln = net.ReadUInt(32)
 	MDispatcher.ControlRooms = util.JSONToTable(util.Decompress(net.ReadData(ln)))
-	PrintTable(MDispatcher.ControlRooms)
 	MDispatcher.Dispatcher = net.ReadString()
 	MDispatcher.Interval = net.ReadString()
 	local ln2 = net.ReadUInt(32)
@@ -62,6 +61,7 @@ net.Receive("MDispatcher.InitialData",function()
 		MDispatcher.SPanel = nil
 	end
 	MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
+	MDispatcher.SPanel:SetVisible(false)
 
 	if MDispatcher.DSCPPanel then
 		MDispatcher.DSCPPanel:Remove()
@@ -104,23 +104,6 @@ function DispPanel:PerformLayout()
 end
 vgui.Register("MDispatcher.DispPanel",DispPanel,"Panel")
 
-local function GetRouteNumber(train)
-	if not IsValid(train) then return end
-	local rnum = train:GetNW2Int("RouteNumber",0)
-	if table.HasValue({"gmod_subway_em508","gmod_subway_81-702","gmod_subway_81-703","gmod_subway_81-705_old","gmod_subway_ezh","gmod_subway_ezh3","gmod_subway_ezh3ru1","gmod_subway_81-717_mvm","gmod_subway_81-718","gmod_subway_81-720","gmod_subway_81-720_1","gmod_subway_81-720a","gmod_subway_81-717_freight"},train:GetClass()) then rnum = rnum / 10 end
-	if rnum == 0 then
-		rnum = train:GetNW2String("RouteNumbera","")
-		if rnum == "" then rnum = 0 end
-	end
-	if rnum == 0 then
-		rnum = train:GetNW2Int("RouteNumber:RouteNumber",0)
-	end
-	if rnum == 0 then
-		rnum = train:GetNW2Int("ASNP:RouteNumber",0)
-	end
-	return rnum
-end
-
 timer.Create("MDispatcher.SetVisible",1,0,function()
 	if (not IsValid(MDispatcher.DPanel) or not IsValid(MDispatcher.SPanel) or not IsValid(MDispatcher.DSCPPanel) or not IsValid(LocalPlayer())) then return end
 
@@ -137,7 +120,7 @@ timer.Create("MDispatcher.SetVisible",1,0,function()
 			MDispatcher.DSCPPanel:SetVisible(false)
 		end
 		if IsValid(LocalPlayer().InMetrostroiTrain) then
-			MDispatcher.SPanel.Route:SetText("Маршрут: "..GetRouteNumber(LocalPlayer().InMetrostroiTrain))
+			MDispatcher.SPanel.Route:SetText("Маршрут: "..MDispatcher.GetRouteNumber(LocalPlayer().InMetrostroiTrain))
 			MDispatcher.SPanel:SetVisible(true)
 		else
 			MDispatcher.SPanel:SetVisible(false)

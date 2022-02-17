@@ -28,17 +28,26 @@ local function DispatcherMenu(routes)
 	local disp_panel = vgui.Create("DPanel",tab)
 	disp_panel:SetSize(tab:GetWide(),tab:GetTall())
 	disp_panel:SetBackgroundColor(Color(0,0,0,0))
-	tab:AddSheet("ДЦХ",disp_panel,"icon16/user_suit.png",false,false)
-
+	disp_panel:SetVisible(false)
+	if LocalPlayer():query("ulx disp") or LocalPlayer():GetNW2Bool("MDispatcher") then
+		tab:AddSheet("ДЦХ",disp_panel,"icon16/user_suit.png",false,false)
+		disp_panel:SetVisible(true)
+	end
+	
 	local dscp_panel = vgui.Create("DPanel",tab)
 	dscp_panel:SetSize(tab:GetWide(),tab:GetTall())
 	dscp_panel:SetBackgroundColor(Color(0,0,0,0))
 	tab:AddSheet("Блок-посты",dscp_panel,"icon16/user_go.png",false,false)
 	
+	
 	local sched_panel = vgui.Create("DPanel",tab)
 	sched_panel:SetSize(tab:GetWide(),tab:GetTall())
 	sched_panel:SetBackgroundColor(Color(0,0,0,0))
-	tab:AddSheet("Расписания",sched_panel,"icon16/table.png",false,false)
+	sched_panel:SetVisible(false)
+	if LocalPlayer():query("ulx disp") or LocalPlayer():GetNW2Bool("MDispatcher") then
+		tab:AddSheet("Расписания",sched_panel,"icon16/table.png",false,false)
+		sched_panel:SetVisible(true)
+	end
 	
 	tab.OnActiveTabChanged = function(self,old,new)
 		if new:GetText() == "ДЦХ" then frame:SetSize(400,355) end
@@ -56,17 +65,25 @@ local function DispatcherMenu(routes)
 	idisp:SetPos(5,5)
 	idisp:SetSize(170,25)
 	idisp:SetText("Занять пост ДЦХ")
-	idisp.DoClick = function()
-		RunConsoleCommand("ulx","disp")
-	end
+	if MDispatcher.Dispatcher ~= "отсутствует" then idisp:SetEnabled(false) end
 	
 	local undisp = vgui.Create("DButton",disp_panel)
 	undisp:SetPos(5,35)
 	undisp:SetSize(170,25)
 	undisp:SetText("Освободить пост ДЦХ")
+	
+	idisp.DoClick = function()
+		RunConsoleCommand("ulx","disp")
+		idisp:SetEnabled(false)
+		undisp:SetEnabled(true)
+	end
 	undisp.DoClick = function()
 		RunConsoleCommand("ulx","undisp")
+		idisp:SetEnabled(true)
+		undisp:SetEnabled(false)
 	end
+	
+	if MDispatcher.Dispatcher == "отсутствует" then undisp:SetEnabled(false) end
 	
 	local lbint = vgui.Create("DLabel",disp_panel)
 	lbint:SetPos(200,5)
@@ -84,14 +101,22 @@ local function DispatcherMenu(routes)
 	setint:SetPos(250,35)
 	setint:SetSize(120,25)
 	setint:SetText("Установить")
-	setint:SetDisabled(true)
+	setint:SetEnabled(false)
 	setint.DoClick = function()
-		RunConsoleCommand("ulx","setint",int:GetText())
+		net.Start("MDispatcher.Commands")
+			net.WriteString("set-int")
+			net.WriteString(int:GetText())
+		net.SendToServer()
 	end
-	int.OnChange = function() -- + проверка на кол-во символов?
-		setint:SetDisabled(false)
+	int.OnChange = function()
+		if #int:GetText() > 3 then
+			setint:SetEnabled(true)
+		else
+			setint:SetEnabled(false)
+		end
 	end
 	
+	------------------- временно ---------------------
 	local tmp_panel = vgui.Create("DPanel",disp_panel)
 	tmp_panel:SetPos(200,80)
 	tmp_panel:SetSize(170,70)
@@ -107,6 +132,7 @@ local function DispatcherMenu(routes)
 	hor_line:SetPos(5,160)
 	hor_line:SetSize(365,1)
 	hor_line:SetBackgroundColor(Color(255,255,255,255))
+	---------------------------------------------------
 	
 	local lbset = vgui.Create("DLabel",disp_panel)
 	lbset:SetPos(5,70)
@@ -122,17 +148,28 @@ local function DispatcherMenu(routes)
 	for _,ply in pairs(player.GetAll()) do
 		setdispbox:AddChoice(ply:Nick())
 	end
+	if not LocalPlayer():query("ulx disp") then setdispbox:SetEnabled(false) end
 	
 	local setdisp = vgui.Create("DButton",disp_panel)
 	setdisp:SetPos(5,125)
 	setdisp:SetSize(170,25)
 	setdisp:SetText("Назначить")
-	setdisp:SetDisabled(true)
+	setdisp:SetEnabled(false)
 	setdisp.DoClick = function()
-		RunConsoleCommand("ulx","setdisp",setdispbox:GetSelected())
+		net.Start("MDispatcher.Commands")
+			net.WriteString("set-disp")
+			net.WriteString(setdispbox:GetSelected())
+		net.SendToServer()
+		idisp:SetEnabled(false)
+		setdisp:SetEnabled(false)
+		undisp:SetEnabled(true)
 	end
 	setdispbox.OnSelect = function(self,index,value)
-		setdisp:SetDisabled(false)
+		if MDispatcher.Dispatcher == "отсутствует" then
+			setdisp:SetEnabled(true)
+		else
+			setdisp:SetEnabled(false)
+		end
 	end
 	
 	local lb_dscpset = vgui.Create("DLabel",disp_panel)
@@ -165,7 +202,7 @@ local function DispatcherMenu(routes)
 	set_dscp:SetPos(5,255)
 	set_dscp:SetSize(170,25)
 	set_dscp:SetText("Назначить")
-	set_dscp:SetDisabled(true)
+	set_dscp:SetEnabled(false)
 	set_dscp.DoClick = function()
 		net.Start("MDispatcher.Commands")
 			net.WriteString("dscp-post-set")
@@ -175,12 +212,12 @@ local function DispatcherMenu(routes)
 	end
 	ply_dscp.OnSelect = function()
 		if st_dscp:GetSelected() then
-			set_dscp:SetDisabled(false)
+			set_dscp:SetEnabled(true)
 		end
 	end
 	st_dscp.OnSelect = function()
 		if ply_dscp:GetSelected() then
-			set_dscp:SetDisabled(false)
+			set_dscp:SetEnabled(true)
 		end
 	end
 	
@@ -206,7 +243,7 @@ local function DispatcherMenu(routes)
 	unset_dscp:SetPos(200,222)
 	unset_dscp:SetSize(170,25)
 	unset_dscp:SetText("Снять")
-	unset_dscp:SetDisabled(true)
+	unset_dscp:SetEnabled(false)
 	unset_dscp.DoClick = function()
 		net.Start("MDispatcher.Commands")
 			net.WriteString("dscp-post-unset")
@@ -214,7 +251,7 @@ local function DispatcherMenu(routes)
 		net.SendToServer()
 	end
 	st_dscp2.OnSelect = function()
-		unset_dscp:SetDisabled(false)
+		unset_dscp:SetEnabled(true)
 	end
 	
 	-- Блок-посты
@@ -226,7 +263,6 @@ local function DispatcherMenu(routes)
 	dscptitle:SetText("Быстрое перемещение к пультам:")
 
 	if MDispatcher.ControlRooms then
-		--if scroll_panel then scroll_panel:Clear() end
 		local scroll_panel = vgui.Create("DScrollPanel",dscp_panel)
 		scroll_panel:SetPos(5,30)
 		cr_height = 10
@@ -260,6 +296,9 @@ local function DispatcherMenu(routes)
 			cr_height = cr_height + 30
 			scroll_panel:SetSize(415,cr_height)
 		end
+		if tab:GetActiveTab():GetText() == "Блок-посты" then -- нужно, если меню открывает ДСЦП без прав ДЦХ
+			frame:SetSize(400,85+cr_height+3)
+		end
 	else
 		local dscpempty = vgui.Create("DLabel",dscp_panel)
 		dscpempty:SetPos(5,25)
@@ -273,5 +312,4 @@ net.Receive("MDispatcher.DispatcherMenu",function()
 	local ln = net.ReadUInt(32)
 	local tbl = util.JSONToTable(util.Decompress(net.ReadData(ln)))
 	DispatcherMenu(tbl)
-	--PrintTable(MDispatcher.ControlRooms)
 end)

@@ -14,6 +14,7 @@ util.AddNetworkString("MDispatcher.Commands")
 util.AddNetworkString("MDispatcher.InitialData")
 util.AddNetworkString("MDispatcher.DSCPData")
 
+MDispatcher.ActiveDispatcher = false
 MDispatcher.Dispatcher = "отсутствует"
 MDispatcher.Interval = "2.00"
 MDispatcher.Stations = {}
@@ -36,8 +37,6 @@ timer.Create("MDispatcher.Init",1,1,function()
 			table.insert(MDispatcher.DSCP,{v.Name,"отсутствует"})
 		end
 	end
-	
-	PrintTable(MDispatcher.DSCP)
 	timer.Remove("MDispatcher.Init")
 end)
 
@@ -81,54 +80,57 @@ end)
 hook.Add("PlayerDisconnected","MDispatcher.Disconnect",function(ply) -- снимаем с поста при отключении
 	if not IsValid(ply) then return end
 	MDispatcher.UnDisp(false,ply)
-	MDispatcher.DSCPUnset(false,ply)
+	MDispatcher.DSCPUnset(false,false,ply)
 end)
 
 function MDispatcher.Disp(ply)
 	if not IsValid(ply) then return end
-	if MDispatcher.Dispatcher == "отсутствует" then
+	if not MDispatcher.ActiveDispatcher then
 		MDispatcher.Dispatcher = ply:Nick()
+		ply:SetNW2Bool("MDispatcher",true)
 		local msg = "игрок "..MDispatcher.Dispatcher.." заступил на пост Диспетчера."
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		DispDataToClients()
+		MDispatcher.ActiveDispatcher = true
 		hook.Run("MDispatcher.TookPost",MDispatcher.Dispatcher)
 	else
 		ply:ChatPrint("Пост диспетчера уже занят.")
 	end
 end
 
-function MDispatcher.SetDisp(ply,target)
-	if MDispatcher.Dispatcher == "отсутствует" then
-		-- временно даем права на меню и смену интервала
-		if not target:query("ulx disp") then
-			if not target:query("ulx setint") then
-				RunConsoleCommand("ulx","userallowid",target:SteamID(),"ulx setint")
-			end
-			if not target:query("ulx dispmenu") then
-				RunConsoleCommand("ulx","userallowid",target:SteamID(),"ulx dispmenu")
-			end
-			if not target:query("ulx undisp") then
-				RunConsoleCommand("ulx","userallowid",target:SteamID(),"ulx undisp")
+function MDispatcher.SetDisp(ply,target_nick)
+	if not IsValid(ply) then return end
+	if not ply:query("ulx disp") then
+		ply:ChatPrint("У вас нет права на это действие.")
+		return
+	end
+	if not MDispatcher.ActiveDispatcher then
+		local tar
+		for k,v in pairs(player.GetAll()) do
+			if v:Nick() == target_nick then
+				tar = v
+				break
 			end
 		end
-		
-		MDispatcher.Dispatcher = target:Nick()
+		MDispatcher.Dispatcher = tar:Nick()
+		tar:SetNW2Bool("MDispatcher",true)
 		local msg
-		if ply:Nick() == target:Nick() then
+		if ply:Nick() == tar:Nick() then
 			msg = "игрок "..MDispatcher.Dispatcher.." заступил на пост Диспетчера."
 		else
 			msg = "игрок "..ply:Nick().." назначил игрока "..MDispatcher.Dispatcher.." на пост Диспетчера."
 		end
-		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		DispDataToClients()
+		MDispatcher.ActiveDispatcher = true
 		hook.Run("MDispatcher.TookPost",MDispatcher.Dispatcher)
+		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	else
 		ply:ChatPrint("Пост диспетчера уже занят.")
 	end
 end
 
 function MDispatcher.UnDisp(ply,target)
-	if MDispatcher.Dispatcher ~= "отсутствует" then
+	if MDispatcher.ActiveDispatcher then
 		if not target then
 			for k,v in pairs(player.GetAll()) do
 				if v:Nick() == MDispatcher.Dispatcher then
@@ -142,54 +144,94 @@ function MDispatcher.UnDisp(ply,target)
 		local msg = "игрок "..MDispatcher.Dispatcher.." покинул пост Диспетчера."
 		if IsValid(ply) then
 			if ply:Nick() ~= target:Nick() then
-				if (ply:IsAdmin()) then
+				if (ply:query("ulx disp")) then
 					msg = ply:Nick().." снял игрока "..MDispatcher.Dispatcher.." с поста Диспетчера."
+					target:SetNW2Bool("MDispatcher",false)
 				else
-					ply:PrintMessage(HUD_PRINTTALK,"Вы не можете покинуть пост, поскольку вы не на посту! Сейчас диспетчер "..MDispatcher.Dispatcher..".")
+					ply:ChatPrint("У вас нет права на это действие.")
 					return
 				end
+			else
+				ply:SetNW2Bool("MDispatcher",false)
 			end
 		else
 			msg = "игрок "..target:Nick().." покинул пост Диспетчера (отключился с сервера)."
 		end
-		if not target:query("ulx disp") then
-			if target:query("ulx setint") then
-				RunConsoleCommand("ulx","userdenyid",target:SteamID(),"ulx setint","true")
-			end
-			if target:query("ulx dispmenu") then
-				RunConsoleCommand("ulx","userdenyid",target:SteamID(),"ulx dispmenu","true")
-			end
-			if target:query("ulx undisp") then
-				RunConsoleCommand("ulx","userdenyid",target:SteamID(),"ulx undisp","true")
-			end
-		end
+		MDispatcher.ActiveDispatcher = false
 		hook.Run("MDispatcher.FreedPost",MDispatcher.Dispatcher)
 		MDispatcher.Dispatcher = "отсутствует"
 		MDispatcher.Interval = "2.00"
-		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		DispDataToClients()
+		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 	end
 end
 
 function MDispatcher.SetInt(ply,mins)
-	if MDispatcher.Dispatcher == ply:Nick() then
+	if not IsValid(ply) then return end
+	if ply:GetNW2Bool("MDispatcher") then
 		MDispatcher.Interval = string.Replace(mins,":",".")
 		local msg = "Диспетчер "..MDispatcher.Dispatcher.." установил интервал движения "..MDispatcher.Interval
 		ULib.tsayColor(nil,false,Color(255, 0, 0), "Внимание, машинисты: ",Color(0, 148, 255),msg)
 		DispDataToClients()
 		hook.Run("MDispatcher.SetInt",MDispatcher.Dispatcher,MDispatcher.Interval)
 	else
-		ply:PrintMessage(HUD_PRINTTALK,"Вы не можете изменить интервал, поскольку вы не на посту! Сейчас диспетчер "..MDispatcher.Dispatcher..".")
+		ply:ChatPrint("Вы не можете изменить интервал, поскольку вы не на посту!\nСейчас диспетчер "..MDispatcher.Dispatcher..".")
 	end
 end
 
+function MDispatcher.DispatcherMenu(ply)
+	if not IsValid(ply) then return end
+	if not ply:query("ulx disp") and not ply:GetNW2Bool("MDispatcher") and not ply:GetNW2Bool("MDSCP") then
+		ply:ChatPrint("У вас нет доступа к меню диспетчера.")
+		return
+	end
+	local routes = {}
+	for train in pairs(Metrostroi.SpawnedTrains) do
+		if not IsValid(train) then continue end
+		if (train.FrontTrain and train.RearTrain) then continue end
+		local driver = train.Owner:GetName()
+		local route = MDispatcher.GetRouteNumber(train)
+		table.insert(routes,{driver,route})
+	end
+	net.Start("MDispatcher.DispatcherMenu")
+		local tbl = util.Compress(util.TableToJSON(routes))
+		local ln = #tbl
+		net.WriteUInt(ln,32)
+		net.WriteData(tbl,ln)
+	net.Send(ply)
+end
+
+concommand.Add("disp_menu",function(ply,cmd,args)
+	if not IsValid(ply) then return end
+	MDispatcher.DispatcherMenu(ply)
+end)
+hook.Add("PlayerSay","MDispatcher.SayHook",function(ply,text)
+	if not IsValid(ply) then return end
+	if (text:lower() == "!dmenu") then
+		MDispatcher.DispatcherMenu(ply)
+	end
+end)
+
 function MDispatcher.DSCPSet(ply,station,target_nick)
+	if not IsValid(ply) then return end
+	if not ply:GetNW2Bool("MDispatcher") then
+		ply:ChatPrint("Вы не можете назначить ДСЦП, поскольку вы не на посту ДЦХ!\nСейчас ДЦХ "..MDispatcher.Dispatcher..".")
+		return
+	end
 	local dscp = {}
 	for k,v in pairs(MDispatcher.DSCP) do
 		if v[1] == station then
 			if v[2] == "отсутствует" then
-				msg = "Игрок "..target_nick.." назначен на пост ДСЦП '"..station.."'."
-				v[2] = target_nick
+				local tar
+				for a,b in pairs(player.GetAll()) do
+					if b:Nick() == target_nick then
+						tar = b
+						break
+					end
+				end
+				msg = "Игрок "..tar:Nick().." назначен на пост ДСЦП '"..station.."'."
+				tar:SetNW2Bool("MDSCP",true)
+				v[2] = tar:Nick()
 			else
 				ply:ChatPrint("Блок-пост уже занят.")
 				return
@@ -207,7 +249,11 @@ function MDispatcher.DSCPSet(ply,station,target_nick)
 	net.Broadcast()
 end
 
-function MDispatcher.DSCPUnset(station,tagret)
+function MDispatcher.DSCPUnset(ply,station,tagret)
+	if IsValid(ply) and not ply:GetNW2Bool("MDispatcher") then
+		ply:ChatPrint("Вы не можете снять ДСЦП, поскольку вы не на посту ДЦХ!\nСейчас ДЦХ "..MDispatcher.Dispatcher..".")
+		return
+	end
 	local dscp = {}
 	local freed_st
 	local founded = false
@@ -223,13 +269,22 @@ function MDispatcher.DSCPUnset(station,tagret)
 			table.insert(dscp,v[2])
 		end
 	else
+		local tar
 		for k,v in pairs(MDispatcher.DSCP) do
 			if v[1] == station then
+				for a,b in pairs(player.GetAll()) do
+					if b:Nick() == v[2] then
+						tar = b
+						break
+					end
+				end
 				msg = "Игрок "..v[2].." снят с поста ДСЦП '"..v[1].."'."
+				tar:SetNW2Bool("MDSCP",false)
 				v[2] = "отсутствует"
 			end
 			table.insert(dscp,v[2])
 		end
+		if table.HasValue(dscp,tar:Nick()) then tar:SetNW2Bool("MDSCP",true) end
 	end
 	if not station and not founded then dscp = nil return end
 	hook.Run("MDispatcher.DSCPUnset",msg)
@@ -261,7 +316,13 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 		MDispatcher.DSCPSet(ply,st,tar)
 	elseif comm == "dscp-post-unset" then
 		local st = net.ReadString()
-		MDispatcher.DSCPUnset(st)
+		MDispatcher.DSCPUnset(ply,st)
+	elseif comm == "set-int" then
+		local mins = net.ReadString()
+		MDispatcher.SetInt(ply,mins)
+	elseif comm == "set-disp" then
+		local nick = net.ReadString()
+		MDispatcher.SetDisp(ply,nick)
 	end
 end)
 
@@ -295,40 +356,6 @@ end
 
 function MDispatcher.ClearSchedule(ply)
 	net.Start("MDispatcher.ClearSchedule")
-	net.Send(ply)
-end
-
-local function GetRouteNumber(train)
-	if not IsValid(train) then return end
-	local rnum = train:GetNW2Int("RouteNumber",0)
-	if table.HasValue({"gmod_subway_em508","gmod_subway_81-702","gmod_subway_81-703","gmod_subway_81-705_old","gmod_subway_ezh","gmod_subway_ezh3","gmod_subway_ezh3ru1","gmod_subway_81-717_mvm","gmod_subway_81-718","gmod_subway_81-720","gmod_subway_81-720_1","gmod_subway_81-720a","gmod_subway_81-717_freight"},train:GetClass()) then rnum = rnum / 10 end
-	if rnum == 0 then
-		rnum = train:GetNW2String("RouteNumbera","")
-		if rnum == "" then rnum = 0 end
-	end
-	if rnum == 0 then
-		rnum = train:GetNW2Int("RouteNumber:RouteNumber",0)
-	end
-	if rnum == 0 then
-		rnum = train:GetNW2Int("ASNP:RouteNumber",0)
-	end
-	return rnum
-end
-
-function MDispatcher.DispatcherMenu(ply)
-	local routes = {}
-	for train in pairs(Metrostroi.SpawnedTrains) do
-		if not IsValid(train) then continue end
-		if (train.FrontTrain and train.RearTrain) then continue end
-		local driver = train.Owner:GetName()
-		local route = GetRouteNumber(train)
-		table.insert(routes,{driver,route})
-	end
-	net.Start("MDispatcher.DispatcherMenu")
-		local tbl = util.Compress(util.TableToJSON(routes))
-		local ln = #tbl
-		net.WriteUInt(ln,32)
-		net.WriteData(tbl,ln)
 	net.Send(ply)
 end
 
