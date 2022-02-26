@@ -262,7 +262,7 @@ local function DispatcherMenu(routes)
 	dscptitle:SetColor(Color(255,255,255))
 	dscptitle:SetText("Быстрое перемещение к пультам:")
 
-	if MDispatcher.ControlRooms then
+	if #MDispatcher.ControlRooms > 0 then
 		local scroll_panel = vgui.Create("DScrollPanel",dscp_panel)
 		scroll_panel:SetPos(5,30)
 		cr_height = 10
@@ -305,6 +305,10 @@ local function DispatcherMenu(routes)
 		dscpempty:SetSize(230,25)
 		dscpempty:SetColor(Color(255,0,0))
 		dscpempty:SetText("Карта пока не поддерживается.")
+		cr_height = 30
+		if tab:GetActiveTab():GetText() == "Блок-посты" then -- нужно, если меню открывает ДСЦП без прав ДЦХ
+			frame:SetSize(400,85+cr_height+3)
+		end
 	end
 end
 
