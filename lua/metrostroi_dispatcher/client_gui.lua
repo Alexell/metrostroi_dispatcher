@@ -6,6 +6,77 @@
 -- Source code: https://github.com/Alexell/metrostroi_dispatcher
 ----------------------------------------------------------------------
 local cr_height = 0
+
+local function FillDSCPMenu()
+	-- фрейм заполнения блок-постов
+	if not MDispatcher.FillControlRooms then MDispatcher.FillControlRooms = {} end
+	
+	local frm = vgui.Create("DFrame")
+	frm:SetSize(400,355)
+	frm:Center()
+	frm:SetTitle("Меню диспетчера: заполнить блок-посты")
+	frm.btnMaxim:SetVisible(false)
+	frm.btnMinim:SetVisible(false)
+	frm:SetVisible(true)
+	frm:SetSizable(false)
+	frm:SetDeleteOnClose(true)
+	frm:SetIcon("icon16/application_view_detail.png")
+	frm:MakePopup()
+	
+	local pan = vgui.Create("DPanel",frm)
+	pan:SetBackgroundColor(Color(0,0,0,0))
+	pan:Dock(FILL)
+	
+	local lbhead = vgui.Create("DLabel",pan)
+	lbhead:SetPos(5,0)
+	lbhead:SetSize(100,25)
+	lbhead:SetFont("MDispSmallTitle")
+	lbhead:SetColor(Color(255,255,255))
+	lbhead:SetText("Инструкция:")
+	
+	local lbdesc1 = vgui.Create("DLabel",pan)
+	lbdesc1:SetPos(5,20)
+	lbdesc1:SetSize(380,115)
+	lbdesc1:SetColor(Color(255,255,255))
+	lbdesc1:SetFont("MDispSmall")
+	lbdesc1:SetText("1. Переместитесь в нужную диспетчерскую любым способом.\n2. Отключите режим полета и подойдие ближе к пульту.\n3. Заполните ниже название блок-поста и нажмите Добавить.\n3.1 Будут сохранены ваши координаты и угол зрения.\n4. Закройте это окно и перемещайтесь в следующий блок-пост.\n\nВАЖНО: Не нажимайте кнопку Сохранить, пока не заполните\nвсе блок-посты! Повторное заполнение будет недоступно.")
+	
+	local crlist = vgui.Create("DListView",pan)
+	crlist:SetMultiSelect(false)
+	crlist:AddColumn("Название")
+	crlist:AddColumn("Координаты")
+	crlist:AddColumn("Углы")
+	crlist:SetPos(5,150)
+	crlist:SetSize(380,100)
+
+	for k,v in pairs(MDispatcher.FillControlRooms) do
+		crlist:AddLine(v.Name,v.Pos,v.Ang)
+	end
+	
+	local crname = vgui.Create("DTextEntry",pan)
+	crname:SetPos(5,255)
+	crname:SetSize(188,25)
+	crname:SetPlaceholderText("Название блок-поста")
+	
+	local cradd = vgui.Create("DButton",pan)
+	cradd:SetPos(198,255)
+	cradd:SetSize(187,25)
+	cradd:SetText("Добавить")
+	cradd.DoClick = function()
+		
+		frm:Close()
+		FillDSCPMenu()
+	end
+	
+	local crsave = vgui.Create("DButton",pan)
+	crsave:SetSize(170,25)
+	crsave:SetPos((pan:GetWide()/2)+85,290)
+	crsave:SetText("СОХРАНИТЬ")
+	crsave.DoClick = function()
+		
+	end
+end
+
 local function DispatcherMenu(routes)
 	-- основной фрейм
 	local frame = vgui.Create("DFrame")
@@ -294,18 +365,28 @@ local function DispatcherMenu(routes)
 				end
 			end
 			cr_height = cr_height + 30
-			scroll_panel:SetSize(415,cr_height)
+			scroll_panel:SetSize(365,cr_height)
 		end
 		if tab:GetActiveTab():GetText() == "Блок-посты" then -- нужно, если меню открывает ДСЦП без прав ДЦХ
 			frame:SetSize(400,85+cr_height+3)
 		end
 	else
 		local dscpempty = vgui.Create("DLabel",dscp_panel)
-		dscpempty:SetPos(5,25)
+		dscpempty:SetPos(5,20)
 		dscpempty:SetSize(230,25)
 		dscpempty:SetColor(Color(255,0,0))
 		dscpempty:SetText("Карта пока не поддерживается.")
-		cr_height = 30
+		local fill_dscp = vgui.Create("DButton",dscp_panel)
+		fill_dscp:SetPos(5,45)
+		fill_dscp:SetSize(170,25)
+		fill_dscp:SetText("Заполнить блок-посты")
+		fill_dscp:SetEnabled(false)
+		fill_dscp.DoClick = function()
+			FillDSCPMenu()
+			frame:Close()
+		end
+		if LocalPlayer():query("ulx disp") then fill_dscp:SetEnabled(true) end
+		cr_height = 55
 		if tab:GetActiveTab():GetText() == "Блок-посты" then -- нужно, если меню открывает ДСЦП без прав ДЦХ
 			frame:SetSize(400,85+cr_height+3)
 		end
