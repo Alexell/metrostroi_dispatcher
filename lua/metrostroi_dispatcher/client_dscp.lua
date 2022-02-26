@@ -54,16 +54,10 @@ end
 
 function DSCPPanel:SetControlRooms()
 	height = 22
-	self:AddCRoom("Депо")
-	height = height + 21
-	self.CRooms:SetSize(130,height)
-	self.DSCP:SetSize(95,height)
-	for k,st in pairs(MDispatcher.ControlRooms) do
-		if not st:find("Депо") and not st:find("депо") then
-			self:AddCRoom(st)
-			height = height + 21
-			self.CRooms:SetSize(130,height)
-		end
+	for k,st in pairs(MDispatcher.DSCPCRooms) do
+		self:AddCRoom(st)
+		height = height + 21
+		self.CRooms:SetSize(130,height)
 	end
 end
 
@@ -75,6 +69,7 @@ function DSCPPanel:Update(nicks)
 		height = height + 21
 		self.DSCP:SetSize(95,height)
 	end
+	MDispatcher.DSCPPlayers = nicks
 end
 vgui.Register("MDispatcher.DSCPPanel",DSCPPanel,"Panel")
 

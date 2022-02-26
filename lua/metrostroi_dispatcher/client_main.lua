@@ -43,12 +43,18 @@ end
 
 net.Receive("MDispatcher.InitialData",function()
 	local ln = net.ReadUInt(32)
-	MDispatcher.ControlRooms = util.JSONToTable(util.Decompress(net.ReadData(ln)))
+	MDispatcher.ControlRooms = util.JSONToTable(util.Decompress(net.ReadData(ln))) -- для вкладки блок-посты
+	MDispatcher.DSCPCRooms = {} -- отдельно для функционала ДСЦП
+	table.insert(MDispatcher.DSCPCRooms,"Депо")
+	for k,st in pairs(MDispatcher.ControlRooms) do
+		if not st:find("Депо") and not st:find("депо") then
+			table.insert(MDispatcher.DSCPCRooms,st)
+		end
+	end
 	MDispatcher.Dispatcher = net.ReadString()
 	MDispatcher.Interval = net.ReadString()
 	local ln2 = net.ReadUInt(32)
-	local nicks = util.JSONToTable(util.Decompress(net.ReadData(ln2)))
-
+	MDispatcher.DSCPPlayers = util.JSONToTable(util.Decompress(net.ReadData(ln2)))
 	if MDispatcher.DPanel then
 		MDispatcher.DPanel:Remove()
 		MDispatcher.DPanel = nil
@@ -69,7 +75,7 @@ net.Receive("MDispatcher.InitialData",function()
 	end
 	MDispatcher.DSCPPanel = vgui.Create("MDispatcher.DSCPPanel")
 	MDispatcher.DSCPPanel:SetControlRooms()
-	MDispatcher.DSCPPanel:Update(nicks)
+	MDispatcher.DSCPPanel:Update(MDispatcher.DSCPPlayers)
 end)
 
 net.Receive("MDispatcher.DispData",function()

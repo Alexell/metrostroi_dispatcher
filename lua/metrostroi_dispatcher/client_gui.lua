@@ -183,9 +183,8 @@ local function DispatcherMenu(routes)
 	st_dscp:SetPos(5,190)
 	st_dscp:SetSize(170,25)
 	st_dscp:SetValue("Выберите блок-пост")
-	st_dscp:AddChoice("Депо")
-	for k,st in pairs(MDispatcher.ControlRooms) do
-		if not st:find("Депо") and not st:find("депо") then
+	for k,st in pairs(MDispatcher.DSCPCRooms) do
+		if MDispatcher.DSCPPlayers[k] == "отсутствует" then
 			st_dscp:AddChoice(st)
 		end
 	end
@@ -209,6 +208,7 @@ local function DispatcherMenu(routes)
 			net.WriteString(st_dscp:GetSelected())
 			net.WriteString(ply_dscp:GetSelected())
 		net.SendToServer()
+		frame:Close()
 	end
 	ply_dscp.OnSelect = function()
 		if st_dscp:GetSelected() then
@@ -232,9 +232,8 @@ local function DispatcherMenu(routes)
 	st_dscp2:SetPos(200,190)
 	st_dscp2:SetSize(170,25)
 	st_dscp2:SetValue("Выберите блок-пост")
-	st_dscp2:AddChoice("Депо")
-	for k,st in pairs(MDispatcher.ControlRooms) do
-		if not st:find("Депо") and not st:find("депо") then
+	for k,st in pairs(MDispatcher.DSCPCRooms) do
+		if MDispatcher.DSCPPlayers[k] ~= "отсутствует" then
 			st_dscp2:AddChoice(st)
 		end
 	end
@@ -249,6 +248,7 @@ local function DispatcherMenu(routes)
 			net.WriteString("dscp-post-unset")
 			net.WriteString(st_dscp2:GetSelected())
 		net.SendToServer()
+		frame:Close()
 	end
 	st_dscp2.OnSelect = function()
 		unset_dscp:SetEnabled(true)
