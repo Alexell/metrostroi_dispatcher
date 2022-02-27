@@ -17,6 +17,7 @@ MDispatcher.ActiveDispatcher = false
 MDispatcher.Dispatcher = "отсутствует"
 MDispatcher.Interval = "2.00"
 MDispatcher.Stations = {}
+MDispatcher.ClientStations = {}
 MDispatcher.ControlRooms = {}
 
 function MDispatcher.Initialize()
@@ -188,19 +189,28 @@ function MDispatcher.DispatcherMenu(ply)
 		return
 	end
 	local routes = {}
+	local drivers_tmp = {}
 	for train in pairs(Metrostroi.SpawnedTrains) do
 		if not IsValid(train) then continue end
 		if (train.FrontTrain and train.RearTrain) then continue end
 		local driver = train.Owner:GetName()
 		local route = MDispatcher.GetRouteNumber(train)
-		table.insert(routes,{driver,route})
+		if table.HasValue(drivers_tmp,driver) then continue end
+		table.insert(routes,{route,driver})
+		table.insert(drivers_tmp,driver)
 	end
+	drivers_tmp = nil
 	net.Start("MDispatcher.Commands")
 		net.WriteString("menu")
-		local tbl = util.Compress(util.TableToJSON(routes))
-		local ln = #tbl
+		routes = util.Compress(util.TableToJSON(routes))
+		local ln = #routes
 		net.WriteUInt(ln,32)
-		net.WriteData(tbl,ln)
+		net.WriteData(routes,ln)
+		
+		local stations = util.Compress(util.TableToJSON(MDispatcher.ClientStations))
+		local ln2 = #stations
+		net.WriteUInt(ln2,32)
+		net.WriteData(stations,ln2)
 	net.Send(ply)
 end
 
@@ -471,6 +481,15 @@ local function BuildStationsTable()
 						MDispatcher.Stations[LineID][Path+1][StationID] = MDispatcher.Stations[LineID][Path][StationID]
 					end
 				end
+			end
+		end
+	end
+	-- версия таблицы для клиента без нод
+	MDispatcher.ClientStations = MDispatcher.Stations
+	for a,b in pairs(MDispatcher.ClientStations) do
+		for c,d in pairs(b) do
+			for k,v in pairs(d) do
+				v.Node = nil
 			end
 		end
 	end

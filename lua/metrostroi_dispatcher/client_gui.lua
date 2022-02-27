@@ -97,7 +97,7 @@ local function FillDSCPMenu()
 	end
 end
 
-local function DispatcherMenu(routes)
+local function DispatcherMenu(routes,stations)
 	-- основной фрейм
 	local frame = vgui.Create("DFrame")
 	frame:SetSize(400,355)
@@ -143,6 +143,7 @@ local function DispatcherMenu(routes)
 	tab.OnActiveTabChanged = function(self,old,new)
 		if new:GetText() == "ДЦХ" then frame:SetSize(400,355) end
 		if new:GetText() == "Блок-посты" then frame:SetSize(400,85+cr_height+3) end
+		if new:GetText() == "Расписания" then frame:SetSize(400,400) end
 		tab:SetSize(frame:GetWide(),frame:GetTall())
 		tab:Dock(FILL)
 	end
@@ -411,6 +412,78 @@ local function DispatcherMenu(routes)
 			frame:SetSize(400,85+cr_height+3)
 		end
 	end
+	
+	-- Расписания
+	local sched_lb = vgui.Create("DLabel",sched_panel)
+	sched_lb:SetPos(5,5)
+	sched_lb:SetSize(230,25)
+	sched_lb:SetColor(Color(255,255,255))
+	sched_lb:SetText("Здесь вы можете сгенерировать расписание машинисту.")
+	
+	local sched_player = vgui.Create("DComboBox",sched_panel)
+	sched_player:SetPos(5,35)
+	sched_player:SetSize(170,25)
+	sched_player:SetValue("Выберите маршрут")
+	
+	for k,v in pairs(routes) do
+		sched_player:AddChoice(v[1].." | "..v[2])
+	end
+	
+	local sched_line = vgui.Create("DComboBox",sched_panel)
+	sched_line:SetPos(5,65)
+	sched_line:SetSize(170,25)
+	sched_line:SetEnabled(false)
+	sched_line:SetValue("Выберите линию")
+	
+	for k,v in pairs(stations) do
+		sched_line:AddChoice(k)
+	end
+	
+	local sched_path = vgui.Create("DComboBox",sched_panel)
+	sched_path:SetPos(5,95)
+	sched_path:SetSize(170,25)
+	sched_path:SetEnabled(false)
+	sched_path:SetValue("Выберите путь")
+	
+	local sched_start = vgui.Create("DComboBox",sched_panel)
+	sched_start:SetPos(5,125)
+	sched_start:SetSize(170,25)
+	sched_start:SetEnabled(false)
+	sched_start:SetSortItems(false)
+	sched_start:SetValue("Начальная станция")
+	
+	local sched_last = vgui.Create("DComboBox",sched_panel)
+	sched_last:SetPos(5,150)
+	sched_last:SetSize(170,25)
+	sched_last:SetEnabled(false)
+	sched_last:SetSortItems(false)
+	sched_last:SetValue("Конечная станция")
+	
+	-- динамическое заполнение и разблокировки
+	sched_player.OnSelect = function()
+		sched_line:SetEnabled(true)
+	end
+	sched_line.OnSelect = function()
+		for k,v in pairs(stations[tonumber(sched_line:GetSelected())]) do
+			sched_path:AddChoice(k)
+		end
+		sched_path:SetEnabled(true)
+	end
+	sched_path.OnSelect = function()
+		for k,v in SortedPairsByMemberValue(stations[tonumber(sched_line:GetSelected())][tonumber(sched_path:GetSelected())],"NodeID") do
+			sched_start:AddChoice(v.Name)
+		end
+		sched_start:SetEnabled(true)
+	end
+	sched_start.OnSelect = function()
+		for k,v in SortedPairsByMemberValue(stations[tonumber(sched_line:GetSelected())][tonumber(sched_path:GetSelected())],"NodeID") do
+			if v.Name ~= sched_start:GetSelected() then
+				sched_last:AddChoice(v.Name)
+			end
+		end
+		sched_last:SetEnabled(true)
+	end
+
 end
 
 net.Receive("MDispatcher.Commands",function()
@@ -418,7 +491,9 @@ net.Receive("MDispatcher.Commands",function()
 	if comm == "menu" then
 		local ln = net.ReadUInt(32)
 		local tbl = util.JSONToTable(util.Decompress(net.ReadData(ln)))
-		DispatcherMenu(tbl)
+		local ln2 = net.ReadUInt(32)
+		local tbl2 = util.JSONToTable(util.Decompress(net.ReadData(ln2)))
+		DispatcherMenu(tbl,tbl2)
 	elseif comm == "cr-add" then
 		local cr_name = net.ReadString()
 		local cr_pos = net.ReadVector()
