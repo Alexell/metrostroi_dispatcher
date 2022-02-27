@@ -20,7 +20,7 @@ local function FillDSCPMenu()
 	frm:SetVisible(true)
 	frm:SetSizable(false)
 	frm:SetDeleteOnClose(true)
-	frm:SetIcon("icon16/application_view_detail.png")
+	frm:SetIcon("icon16/table_gear.png")
 	frm:MakePopup()
 	
 	local pan = vgui.Create("DPanel",frm)
@@ -50,7 +50,7 @@ local function FillDSCPMenu()
 	crlist:SetSize(380,100)
 
 	for k,v in pairs(MDispatcher.FillControlRooms) do
-		crlist:AddLine(v.Name,v.Pos,v.Ang)
+		crlist:AddLine(v.Name,tostring(v.Pos),tostring(v.Ang))
 	end
 	
 	local crname = vgui.Create("DTextEntry",pan)
@@ -62,10 +62,20 @@ local function FillDSCPMenu()
 	cradd:SetPos(198,255)
 	cradd:SetSize(187,25)
 	cradd:SetText("Добавить")
+	cradd:SetEnabled(false)
 	cradd.DoClick = function()
-		
+		net.Start("MDispatcher.Commands")
+			net.WriteString("cr-add")
+			net.WriteString(crname:GetText())
+		net.SendToServer()
 		frm:Close()
-		FillDSCPMenu()
+	end
+	crname.OnChange = function()
+		if #crname:GetText() > 3 then
+			cradd:SetEnabled(true)
+		else
+			cradd:SetEnabled(false)
+		end
 	end
 	
 	local crsave = vgui.Create("DButton",pan)
@@ -73,7 +83,17 @@ local function FillDSCPMenu()
 	crsave:SetPos((pan:GetWide()/2)+85,290)
 	crsave:SetText("СОХРАНИТЬ")
 	crsave.DoClick = function()
-		
+		net.Start("MDispatcher.Commands")
+			net.WriteString("cr-save")
+			net.WriteTable(MDispatcher.FillControlRooms)
+		net.SendToServer()
+		frm:Close()
+		MDispatcher.FillControlRooms = nil
+	end
+	if #crlist:GetLines() > 0 then
+		crsave:SetEnabled(true)
+	else
+		crsave:SetEnabled(false)
 	end
 end
 
@@ -375,7 +395,7 @@ local function DispatcherMenu(routes)
 		dscpempty:SetPos(5,20)
 		dscpempty:SetSize(230,25)
 		dscpempty:SetColor(Color(255,0,0))
-		dscpempty:SetText("Карта пока не поддерживается.")
+		dscpempty:SetText("Блок-посты на этой карте не заполнены.")
 		local fill_dscp = vgui.Create("DButton",dscp_panel)
 		fill_dscp:SetPos(5,45)
 		fill_dscp:SetSize(170,25)
@@ -393,8 +413,19 @@ local function DispatcherMenu(routes)
 	end
 end
 
-net.Receive("MDispatcher.DispatcherMenu",function()
-	local ln = net.ReadUInt(32)
-	local tbl = util.JSONToTable(util.Decompress(net.ReadData(ln)))
-	DispatcherMenu(tbl)
+net.Receive("MDispatcher.Commands",function()
+	local comm = net.ReadString()
+	if comm == "menu" then
+		local ln = net.ReadUInt(32)
+		local tbl = util.JSONToTable(util.Decompress(net.ReadData(ln)))
+		DispatcherMenu(tbl)
+	elseif comm == "cr-add" then
+		local cr_name = net.ReadString()
+		local cr_pos = net.ReadVector()
+		local cr_ang = net.ReadAngle()
+		table.insert(MDispatcher.FillControlRooms,{Name = cr_name,Pos = cr_pos,Ang = cr_ang})
+		FillDSCPMenu()
+	elseif comm == "cr-save-ok" then
+		Derma_Message("Блок-посты сохранены успешно!\nЧтобы увидеть изменения, пожалуйста перезайдите на сервер.", "Меню диспетчера", "OK")
+	end
 end)

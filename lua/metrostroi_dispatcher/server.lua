@@ -9,7 +9,6 @@
 util.AddNetworkString("MDispatcher.DispData")
 util.AddNetworkString("MDispatcher.ScheduleData")
 util.AddNetworkString("MDispatcher.ClearSchedule")
-util.AddNetworkString("MDispatcher.DispatcherMenu")
 util.AddNetworkString("MDispatcher.Commands")
 util.AddNetworkString("MDispatcher.InitialData")
 util.AddNetworkString("MDispatcher.DSCPData")
@@ -19,9 +18,8 @@ MDispatcher.Dispatcher = "отсутствует"
 MDispatcher.Interval = "2.00"
 MDispatcher.Stations = {}
 MDispatcher.ControlRooms = {}
-MDispatcher.DSCP = {}
 
-timer.Create("MDispatcher.Init",1,1,function()
+function MDispatcher.Initialize()
 	-- загрузка блок-постов
 	if not file.Exists("mdispatcher_controlrooms.txt","DATA") then
 		file.Write("mdispatcher_controlrooms.txt",MDispatcher.DefControlRooms)
@@ -31,12 +29,16 @@ timer.Create("MDispatcher.Init",1,1,function()
 	local fl = file.Read("mdispatcher_controlrooms.txt","DATA")
 	local tab = fl and util.JSONToTable(fl) or {}
 	MDispatcher.ControlRooms = tab[game.GetMap()] or {}
+	MDispatcher.DSCP = {}
 	table.insert(MDispatcher.DSCP,{"Депо","отсутствует"})
 	for k,v in pairs(MDispatcher.ControlRooms) do
 		if not v.Name:find("Депо") and not v.Name:find("депо") then
 			table.insert(MDispatcher.DSCP,{v.Name,"отсутствует"})
 		end
 	end
+end
+timer.Create("MDispatcher.Init",1,1,function()
+	MDispatcher.Initialize()
 	timer.Remove("MDispatcher.Init")
 end)
 
@@ -193,7 +195,8 @@ function MDispatcher.DispatcherMenu(ply)
 		local route = MDispatcher.GetRouteNumber(train)
 		table.insert(routes,{driver,route})
 	end
-	net.Start("MDispatcher.DispatcherMenu")
+	net.Start("MDispatcher.Commands")
+		net.WriteString("menu")
 		local tbl = util.Compress(util.TableToJSON(routes))
 		local ln = #tbl
 		net.WriteUInt(ln,32)
@@ -297,6 +300,31 @@ function MDispatcher.DSCPUnset(ply,station,tagret)
 	net.Broadcast()
 end
 
+local function AddControlRoom(ply,name)
+    local pos = ply:GetPos()+Vector(0,0,10)
+	local ang = ply:EyeAngles()
+	net.Start("MDispatcher.Commands")
+		net.WriteString("cr-add")
+		net.WriteString(name)
+		net.WriteVector(pos)
+		net.WriteAngle(ang)
+	net.Send(ply)
+end
+
+local function SaveControlRooms(ply,tab)
+	local fl = file.Read("mdispatcher_controlrooms.txt","DATA")
+	local crooms = fl and util.JSONToTable(fl) or {}
+	crooms[game.GetMap()] = tab
+	file.Write("mdispatcher_controlrooms.txt",util.TableToJSON(crooms,true))
+	timer.Create("MDispatcher.ReInit",0.2,1,function()
+		MDispatcher.Initialize()
+		timer.Remove("MDispatcher.ReInit")
+		net.Start("MDispatcher.Commands")
+			net.WriteString("cr-save-ok")
+		net.Send(ply)
+	end)
+end
+
 net.Receive("MDispatcher.Commands",function(ln,ply)
 	if not IsValid(ply) then return end
 	local comm = net.ReadString()
@@ -323,6 +351,12 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 	elseif comm == "set-disp" then
 		local nick = net.ReadString()
 		MDispatcher.SetDisp(ply,nick)
+	elseif comm == "cr-add" then
+		local cr_name = net.ReadString()
+		AddControlRoom(ply,cr_name)
+	elseif comm == "cr-save" then
+		local tab = net.ReadTable()
+		SaveControlRooms(ply,tab)
 	end
 end)
 
