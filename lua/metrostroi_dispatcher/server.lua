@@ -189,17 +189,13 @@ function MDispatcher.DispatcherMenu(ply)
 		return
 	end
 	local routes = {}
-	local drivers_tmp = {}
 	for train in pairs(Metrostroi.SpawnedTrains) do
 		if not IsValid(train) then continue end
 		if (train.FrontTrain and train.RearTrain) then continue end
 		local driver = train.Owner:GetName()
 		local route = MDispatcher.GetRouteNumber(train)
-		if table.HasValue(drivers_tmp,driver) then continue end
-		table.insert(routes,{route,driver})
-		table.insert(drivers_tmp,driver)
+		if not routes[driver] then routes[driver] = route end
 	end
-	drivers_tmp = nil
 	net.Start("MDispatcher.Commands")
 		net.WriteString("menu")
 		routes = util.Compress(util.TableToJSON(routes))

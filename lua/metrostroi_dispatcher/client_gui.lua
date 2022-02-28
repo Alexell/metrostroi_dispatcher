@@ -143,7 +143,7 @@ local function DispatcherMenu(routes,stations)
 	tab.OnActiveTabChanged = function(self,old,new)
 		if new:GetText() == "ДЦХ" then frame:SetSize(400,355) end
 		if new:GetText() == "Блок-посты" then frame:SetSize(400,85+cr_height+3) end
-		if new:GetText() == "Расписания" then frame:SetSize(400,400) end
+		if new:GetText() == "Расписания" then frame:SetSize(400,300) end
 		tab:SetSize(frame:GetWide(),frame:GetTall())
 		tab:Dock(FILL)
 	end
@@ -416,21 +416,43 @@ local function DispatcherMenu(routes,stations)
 	-- Расписания
 	local sched_lb = vgui.Create("DLabel",sched_panel)
 	sched_lb:SetPos(5,5)
-	sched_lb:SetSize(230,25)
 	sched_lb:SetColor(Color(255,255,255))
-	sched_lb:SetText("Здесь вы можете сгенерировать расписание машинисту.")
+	sched_lb:SetText("Здесь вы можете отправить расписание машинисту.")
+	sched_lb:SetFont("MDispSmallTitle")
+	sched_lb:SizeToContents()
+	
+	local sched_player_lb = vgui.Create("DLabel",sched_panel)
+	sched_player_lb:SetPos(5,30)
+	sched_player_lb:SetSize(100,25)
+	sched_player_lb:SetColor(Color(255,255,255))
+	sched_player_lb:SetText("Маршрут:")
+	sched_player_lb:SetFont("MDispSmallTitle")
+	sched_player_lb:SizeToContents()
 	
 	local sched_player = vgui.Create("DComboBox",sched_panel)
-	sched_player:SetPos(5,35)
+	sched_player:SetPos(5,50)
 	sched_player:SetSize(170,25)
 	sched_player:SetValue("Выберите маршрут")
 	
 	for k,v in pairs(routes) do
-		sched_player:AddChoice(v[1].." | "..v[2])
+		sched_player:AddChoice(v.." | "..k)
 	end
 	
+	local hor_line2 = vgui.Create("DPanel",sched_panel)
+	hor_line2:SetPos(5,83)
+	hor_line2:SetSize(365,1)
+	hor_line2:SetBackgroundColor(Color(255,255,255,255))
+	
+	local sched_line_lb = vgui.Create("DLabel",sched_panel)
+	sched_line_lb:SetPos(5,90)
+	sched_line_lb:SetSize(100,25)
+	sched_line_lb:SetColor(Color(255,255,255))
+	sched_line_lb:SetText("Линия:")
+	sched_line_lb:SetFont("MDispSmallTitle")
+	sched_line_lb:SizeToContents()
+	
 	local sched_line = vgui.Create("DComboBox",sched_panel)
-	sched_line:SetPos(5,65)
+	sched_line:SetPos(5,110)
 	sched_line:SetSize(170,25)
 	sched_line:SetEnabled(false)
 	sched_line:SetValue("Выберите линию")
@@ -439,51 +461,98 @@ local function DispatcherMenu(routes,stations)
 		sched_line:AddChoice(k)
 	end
 	
+	local sched_path_lb = vgui.Create("DLabel",sched_panel)
+	sched_path_lb:SetPos(200,90)
+	sched_path_lb:SetSize(100,25)
+	sched_path_lb:SetColor(Color(255,255,255))
+	sched_path_lb:SetText("Путь:")
+	sched_path_lb:SetFont("MDispSmallTitle")
+	sched_path_lb:SizeToContents()
+	
 	local sched_path = vgui.Create("DComboBox",sched_panel)
-	sched_path:SetPos(5,95)
+	sched_path:SetPos(200,110)
 	sched_path:SetSize(170,25)
 	sched_path:SetEnabled(false)
 	sched_path:SetValue("Выберите путь")
 	
+	local sched_start_lb = vgui.Create("DLabel",sched_panel)
+	sched_start_lb:SetPos(5,145)
+	sched_start_lb:SetSize(100,25)
+	sched_start_lb:SetColor(Color(255,255,255))
+	sched_start_lb:SetText("Начальная станция:")
+	sched_start_lb:SetFont("MDispSmallTitle")
+	sched_start_lb:SizeToContents()
+	
 	local sched_start = vgui.Create("DComboBox",sched_panel)
-	sched_start:SetPos(5,125)
+	sched_start:SetPos(5,165)
 	sched_start:SetSize(170,25)
 	sched_start:SetEnabled(false)
 	sched_start:SetSortItems(false)
-	sched_start:SetValue("Начальная станция")
+	sched_start:SetValue("Выберите станцию")
+	
+	local sched_last_lb = vgui.Create("DLabel",sched_panel)
+	sched_last_lb:SetPos(200,145)
+	sched_last_lb:SetSize(100,25)
+	sched_last_lb:SetColor(Color(255,255,255))
+	sched_last_lb:SetText("Конечная станция:")
+	sched_last_lb:SetFont("MDispSmallTitle")
+	sched_last_lb:SizeToContents()
 	
 	local sched_last = vgui.Create("DComboBox",sched_panel)
-	sched_last:SetPos(5,150)
+	sched_last:SetPos(200,165)
 	sched_last:SetSize(170,25)
 	sched_last:SetEnabled(false)
 	sched_last:SetSortItems(false)
-	sched_last:SetValue("Конечная станция")
+	sched_last:SetValue("Выберите станцию")
 	
-	-- динамическое заполнение и разблокировки
+	local sched_get = vgui.Create("DButton",sched_panel)
+	sched_get:SetSize(150,25)
+	sched_get:SetPos((sched_panel:GetWide()/2)-(sched_get:GetWide()/2)-12,200)
+	sched_get:SetEnabled(false)
+	sched_get:SetText("Генерировать")
+	sched_get.DoClick = function()
+		
+	end
+	
+	-- динамическое заполнение и блокировки
 	sched_player.OnSelect = function()
 		sched_line:SetEnabled(true)
 	end
 	sched_line.OnSelect = function()
+		sched_path:Clear()
+		sched_path:SetValue("Выберите путь")
 		for k,v in pairs(stations[tonumber(sched_line:GetSelected())]) do
 			sched_path:AddChoice(k)
 		end
 		sched_path:SetEnabled(true)
+		sched_start:SetEnabled(false)
+		sched_last:SetEnabled(false)
+		sched_get:SetEnabled(false)
 	end
 	sched_path.OnSelect = function()
+		sched_start:Clear()
+		sched_start:SetValue("Выберите станцию")
 		for k,v in SortedPairsByMemberValue(stations[tonumber(sched_line:GetSelected())][tonumber(sched_path:GetSelected())],"NodeID") do
 			sched_start:AddChoice(v.Name)
 		end
 		sched_start:SetEnabled(true)
+		sched_last:SetEnabled(false)
+		sched_get:SetEnabled(false)
 	end
 	sched_start.OnSelect = function()
+		sched_last:Clear()
+		sched_last:SetValue("Выберите станцию")
 		for k,v in SortedPairsByMemberValue(stations[tonumber(sched_line:GetSelected())][tonumber(sched_path:GetSelected())],"NodeID") do
 			if v.Name ~= sched_start:GetSelected() then
 				sched_last:AddChoice(v.Name)
 			end
 		end
 		sched_last:SetEnabled(true)
+		sched_get:SetEnabled(false)
 	end
-
+	sched_last.OnSelect = function()
+		sched_get:SetEnabled(true)
+	end
 end
 
 net.Receive("MDispatcher.Commands",function()
@@ -501,6 +570,6 @@ net.Receive("MDispatcher.Commands",function()
 		table.insert(MDispatcher.FillControlRooms,{Name = cr_name,Pos = cr_pos,Ang = cr_ang})
 		FillDSCPMenu()
 	elseif comm == "cr-save-ok" then
-		Derma_Message("Блок-посты сохранены успешно!\nЧтобы увидеть изменения, пожалуйста перезайдите на сервер.", "Меню диспетчера", "OK")
+		Derma_Message("Блок-посты сохранены успешно! Чтобы увидеть изменения, пожалуйста перезайдите на сервер.", "Меню диспетчера", "OK")
 	end
 end)
