@@ -109,7 +109,7 @@ function MDispatcher.SetDisp(ply,target_nick)
 	end
 	if not MDispatcher.ActiveDispatcher then
 		local tar
-		for k,v in pairs(player.GetAll()) do
+		for k,v in ipairs(player.GetAll()) do
 			if v:Nick() == target_nick then
 				tar = v
 				break
@@ -135,7 +135,7 @@ end
 function MDispatcher.UnDisp(ply,target)
 	if MDispatcher.ActiveDispatcher then
 		if not target then
-			for k,v in pairs(player.GetAll()) do
+			for k,v in ipairs(player.GetAll()) do
 				if v:Nick() == MDispatcher.Dispatcher then
 					target = v
 					break
@@ -232,7 +232,7 @@ function MDispatcher.DSCPSet(ply,station,target_nick)
 		if v[1] == station then
 			if v[2] == "отсутствует" then
 				local tar
-				for a,b in pairs(player.GetAll()) do
+				for a,b in ipairs(player.GetAll()) do
 					if b:Nick() == target_nick then
 						tar = b
 						break
@@ -281,7 +281,7 @@ function MDispatcher.DSCPUnset(ply,station,tagret)
 		local tar
 		for k,v in pairs(MDispatcher.DSCP) do
 			if v[1] == station then
-				for a,b in pairs(player.GetAll()) do
+				for a,b in ipairs(player.GetAll()) do
 					if b:Nick() == v[2] then
 						tar = b
 						break
@@ -363,6 +363,22 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 	elseif comm == "cr-save" then
 		local tab = net.ReadTable()
 		SaveControlRooms(ply,tab)
+	elseif comm == "sched-generate" then
+		local nick = net.ReadString()
+		local path = net.ReadInt(3)
+		local start = MDispatcher.StationIndexByName(net.ReadString())
+		local last = MDispatcher.StationIndexByName(net.ReadString())
+		local sched,ftime,btime = MDispatcher.GenerateSimpleSched(start,path,last)
+		net.Start("MDispatcher.Commands")
+			net.WriteString("sched-pre-send")
+			net.WriteString(nick)
+			local tab = util.Compress(util.TableToJSON(sched))
+			local ln = #tab
+			net.WriteUInt(ln,32)
+			net.WriteData(tab,ln)
+			net.WriteInt(ftime,13)
+			--net.WriteString(btime)
+		net.Send(ply)
 	end
 end)
 
@@ -431,18 +447,6 @@ local function PLLFix()
 	StationConfig = nil
 end
 
--- название станции по индексу
-local function StationNameByIndex(index)
-	if not Metrostroi.StationConfigurations then return end
-	local StationName
-	for k,v in pairs(Metrostroi.StationConfigurations) do
-		local CurIndex = tonumber(k)
-		if not CurIndex or not istable(v) or not v.names or not istable(v.names) or table.Count(v.names) < 1 then StationName = k else StationName = v.names[1] end
-		if CurIndex == index then return StationName end
-	end
-	return
-end
-
 -- собираем нужную инфу по станциям
 local function BuildStationsTable()
 	local distance = 600
@@ -463,7 +467,7 @@ local function BuildStationsTable()
 		StationID = ent.StationIndex
 		if MDispatcher.Stations[LineID][Path][StationID] == nil then MDispatcher.Stations[LineID][Path][StationID] = {} end
 		if not MDispatcher.Stations[LineID][Path][StationID].Name then
-			MDispatcher.Stations[LineID][Path][StationID].Name = StationNameByIndex(ent.StationIndex)
+			MDispatcher.Stations[LineID][Path][StationID].Name = MDispatcher.StationNameByIndex(ent.StationIndex)
 			StationNode = Metrostroi.GetPositionOnTrack(LerpVector(0.5, ent.PlatformStart, ent.PlatformEnd))
 			StationNode = StationNode[1] and StationNode[1].node1 or {}
 			MDispatcher.Stations[LineID][Path][StationID].Node = StationNode

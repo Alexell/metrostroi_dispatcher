@@ -22,6 +22,7 @@ else
 	include("metrostroi_dispatcher/client_gui.lua")
 end
 
+-- получить номер маршрута с поезда
 function MDispatcher.GetRouteNumber(train)
 	if not IsValid(train) then return end
 	local rnum = train:GetNW2Int("RouteNumber",0)
@@ -37,4 +38,24 @@ function MDispatcher.GetRouteNumber(train)
 		rnum = train:GetNW2Int("ASNP:RouteNumber",0)
 	end
 	return rnum
+end
+
+-- название станции по индексу
+function MDispatcher.StationNameByIndex(index)
+	if not Metrostroi.StationConfigurations then return end
+	local StationName
+	for k,v in pairs(Metrostroi.StationConfigurations) do
+		local CurIndex = tonumber(k)
+		if not CurIndex or not istable(v) or not v.names or not istable(v.names) or table.Count(v.names) < 1 then StationName = k else StationName = v.names[1] end
+		if CurIndex == index then return StationName end
+	end
+end
+
+-- индекс станции по названию
+function MDispatcher.StationIndexByName(name)
+	if not Metrostroi.StationConfigurations then return end
+	for k,v in pairs(Metrostroi.StationConfigurations) do
+		if not tonumber(k) or not istable(v) or not v.names or not istable(v.names) or table.Count(v.names) < 1 then continue end
+		if table.HasValue(v.names,name) or k == name then return k end
+	end
 end

@@ -237,7 +237,7 @@ local function DispatcherMenu(routes,stations)
 	setdispbox:SetPos(5,95)
 	setdispbox:SetSize(170,25)
 	setdispbox:SetValue("Выберите игрока")
-	for _,ply in pairs(player.GetAll()) do
+	for _,ply in ipairs(player.GetAll()) do
 		setdispbox:AddChoice(ply:Nick())
 	end
 	if not LocalPlayer():query("ulx disp") then setdispbox:SetEnabled(false) end
@@ -285,7 +285,7 @@ local function DispatcherMenu(routes,stations)
 	ply_dscp:SetPos(5,222)
 	ply_dscp:SetSize(170,25)
 	ply_dscp:SetValue("Выберите игрока")
-	for _,ply in pairs(player.GetAll()) do
+	for _,ply in ipairs(player.GetAll()) do
 		ply_dscp:AddChoice(ply:Nick())
 	end
 	
@@ -511,7 +511,14 @@ local function DispatcherMenu(routes,stations)
 	sched_get:SetEnabled(false)
 	sched_get:SetText("Генерировать")
 	sched_get.DoClick = function()
-		
+		net.Start("MDispatcher.Commands")
+			net.WriteString("sched-generate")
+			net.WriteString(string.Explode(" | ",sched_player:GetSelected())[2])
+			net.WriteInt(sched_path:GetSelected(),3)
+			net.WriteString(sched_start:GetSelected())
+			net.WriteString(sched_last:GetSelected())
+		net.SendToServer()
+		frame:Close()
 	end
 	
 	-- динамическое заполнение и блокировки
@@ -571,5 +578,10 @@ net.Receive("MDispatcher.Commands",function()
 		FillDSCPMenu()
 	elseif comm == "cr-save-ok" then
 		Derma_Message("Блок-посты сохранены успешно! Чтобы увидеть изменения, пожалуйста перезайдите на сервер.", "Меню диспетчера", "OK")
+	elseif comm == "sched-pre-send" then
+		local nick = net.ReadString()
+		local ln = net.ReadUInt(32)
+		local sched = util.JSONToTable(util.Decompress(net.ReadData(ln)))
+		local ftime = net.ReadInt(13)
 	end
 end)
