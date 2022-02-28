@@ -48,8 +48,14 @@ function DSCPPanel:AddNick(nick)
 	local lb2 = self.DSCP:Add("DLabel")
 	lb2:SetFont("MDispSmall")
 	lb2:SetText(nick)
+	lb2:SizeToContents()
+	if lb2:GetWide() < 90 then
+		lb2:SetPos(90-lb2:GetWide(),height-20)
+	else
+		lb2:SetPos(0,height-20)
+		lb2:SetSize(90,20)
+	end
 	lb2:SetTextColor(Color(255,255,255))
-	lb2:Dock(TOP)
 end
 
 function DSCPPanel:SetControlRooms()
@@ -69,10 +75,10 @@ function DSCPPanel:Update(nicks)
 	for _,nick in pairs(nicks) do
 		self:AddNick(nick)
 		height = height + 20
-		self.DSCP:SetSize(95,height)
+		self.DSCP:SetSize(90,height)
 	end
 	height = height + 5
-	self.DSCP:SetSize(95,height)
+	self.DSCP:SetSize(90,height)
 	MDispatcher.DSCPPlayers = nicks
 end
 vgui.Register("MDispatcher.DSCPPanel",DSCPPanel,"Panel")
