@@ -77,7 +77,7 @@ hook.Add("PlayerInitialSpawn","MDispatcher.InitPlayer",function(ply) -- отпр
 		local ln2 = #dscp
 		net.WriteUInt(ln2,32)
 		net.WriteData(dscp,ln2)
-	net.Broadcast()
+	net.Send(ply)
 end)
 
 hook.Add("PlayerDisconnected","MDispatcher.Disconnect",function(ply) -- снимаем с поста при отключении
@@ -101,20 +101,14 @@ function MDispatcher.Disp(ply)
 	end
 end
 
-function MDispatcher.SetDisp(ply,target_nick)
+function MDispatcher.SetDisp(ply,sid)
 	if not IsValid(ply) then return end
 	if not ply:query("ulx disp") then
 		ply:ChatPrint("У вас нет права на это действие.")
 		return
 	end
 	if not MDispatcher.ActiveDispatcher then
-		local tar
-		for k,v in ipairs(player.GetAll()) do
-			if v:Nick() == target_nick then
-				tar = v
-				break
-			end
-		end
+		local tar = player.GetBySteamID(sid)
 		MDispatcher.Dispatcher = tar:Nick()
 		tar:SetNW2Bool("MDispatcher",true)
 		local msg
@@ -192,9 +186,9 @@ function MDispatcher.DispatcherMenu(ply)
 	for train in pairs(Metrostroi.SpawnedTrains) do
 		if not IsValid(train) then continue end
 		if (train.FrontTrain and train.RearTrain) then continue end
-		local driver = train.Owner:GetName()
+		local driver = train.Owner
 		local route = MDispatcher.GetRouteNumber(train)
-		if not routes[driver] then routes[driver] = route end
+		if not routes[driver:SteamID()] then routes[driver:SteamID()] = {Nick = driver:Nick(), Route = route} end
 	end
 	net.Start("MDispatcher.Commands")
 		net.WriteString("menu")
@@ -221,7 +215,7 @@ hook.Add("PlayerSay","MDispatcher.SayHook",function(ply,text)
 	end
 end)
 
-function MDispatcher.DSCPSet(ply,station,target_nick)
+function MDispatcher.DSCPSet(ply,station,target_sid)
 	if not IsValid(ply) then return end
 	if not ply:GetNW2Bool("MDispatcher") then
 		ply:ChatPrint("Вы не можете назначить ДСЦП, поскольку вы не на посту ДЦХ!\nСейчас ДЦХ "..MDispatcher.Dispatcher..".")
@@ -231,13 +225,7 @@ function MDispatcher.DSCPSet(ply,station,target_nick)
 	for k,v in pairs(MDispatcher.DSCP) do
 		if v[1] == station then
 			if v[2] == "отсутствует" then
-				local tar
-				for a,b in ipairs(player.GetAll()) do
-					if b:Nick() == target_nick then
-						tar = b
-						break
-					end
-				end
+				local tar = player.GetBySteamID(target_sid)
 				msg = "Игрок "..tar:Nick().." назначен на пост ДСЦП '"..station.."'."
 				tar:SetNW2Bool("MDSCP",true)
 				v[2] = tar:Nick()
@@ -355,29 +343,34 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 		local mins = net.ReadString()
 		MDispatcher.SetInt(ply,mins)
 	elseif comm == "set-disp" then
-		local nick = net.ReadString()
-		MDispatcher.SetDisp(ply,nick)
+		local sid = net.ReadString()
+		MDispatcher.SetDisp(ply,sid)
 	elseif comm == "cr-add" then
 		local cr_name = net.ReadString()
 		AddControlRoom(ply,cr_name)
 	elseif comm == "cr-save" then
 		local tab = net.ReadTable()
 		SaveControlRooms(ply,tab)
-	elseif comm == "sched-generate" then
-		local nick = net.ReadString()
+	elseif comm == "sched-send" then
+		local sid = net.ReadString()
 		local path = net.ReadInt(3)
-		local start = MDispatcher.StationIndexByName(net.ReadString())
-		local last = MDispatcher.StationIndexByName(net.ReadString())
-		local sched,ftime,btime = MDispatcher.GenerateSimpleSched(start,path,last)
-		net.Start("MDispatcher.Commands")
-			net.WriteString("sched-pre-send")
-			net.WriteString(nick)
-			local tab = util.Compress(util.TableToJSON(sched))
-			local ln = #tab
+		local start = net.ReadInt(11)
+		local last = net.ReadInt(11)
+		local holds = net.ReadTable()
+		PrintTable(holds)
+		local tar = player.GetBySteamID(sid)
+		local sched,ftime,btime = MDispatcher.GenerateSimpleSched(start,path,last,holds)
+		net.Start("MDispatcher.ScheduleData")
+			local tbl = util.Compress(util.TableToJSON(sched))
+			local ln = #tbl
 			net.WriteUInt(ln,32)
-			net.WriteData(tab,ln)
-			net.WriteInt(ftime,13)
-			--net.WriteString(btime)
+			net.WriteData(tbl,ln)
+			net.WriteString(ftime)
+			net.WriteString(btime)
+			net.WriteTable(holds)
+		net.Send(tar)
+		net.Start("MDispatcher.Commands")
+			net.WriteString("sched-send-ok")
 		net.Send(ply)
 	end
 end)
@@ -484,12 +477,13 @@ local function BuildStationsTable()
 			end
 		end
 	end
+	
 	-- версия таблицы для клиента без нод
-	MDispatcher.ClientStations = MDispatcher.Stations
-	for a,b in pairs(MDispatcher.ClientStations) do
-		for c,d in pairs(b) do
-			for k,v in pairs(d) do
-				v.Node = nil
+	MDispatcher.ClientStations = table.Copy(MDispatcher.Stations)
+	for c,d in pairs(MDispatcher.ClientStations) do
+		for e,f in pairs(d) do
+			for g,h in pairs(f) do
+				h.Node = nil
 			end
 		end
 	end
@@ -548,10 +542,10 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 		if v.NodeID == last_node.id then
 			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + (station_time/2)
 			full_time = full_time + travel_time
-			table.insert(sched_massiv, {Name = v.Name, Time = os.date("%X",RoundSeconds(init_time + full_time))})
+			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",RoundSeconds(init_time + full_time))})
 			break
 		end
-		table.insert(sched_massiv, {Name = v.Name, Time = os.date("%X",RoundSeconds(init_time + full_time))})
+		table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",RoundSeconds(init_time + full_time))})
 		prev_node = v.Node
 	end
 	back_time = os.date("%X", RoundSeconds(init_time + full_time + 120))

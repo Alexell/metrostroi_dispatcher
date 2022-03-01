@@ -39,7 +39,7 @@ local function FillDSCPMenu()
 	lbdesc1:SetSize(380,115)
 	lbdesc1:SetColor(Color(255,255,255))
 	lbdesc1:SetFont("MDispSmall")
-	lbdesc1:SetText("1. Переместитесь в нужную диспетчерскую любым способом.\n2. Отключите режим полета и подойдие ближе к пульту.\n3. Заполните ниже название блок-поста и нажмите Добавить.\n3.1 Будут сохранены ваши координаты и угол зрения.\n4. Закройте это окно и перемещайтесь в следующий блок-пост.\n\nВАЖНО: Не нажимайте кнопку Сохранить, пока не заполните\nвсе блок-посты! Повторное заполнение будет недоступно.")
+	lbdesc1:SetText("1. Переместитесь в нужный блок-пост любым способом.\n2. Отключите режим полета и подойдие ближе к пульту.\n3. Заполните ниже название блок-поста и нажмите Добавить.\n3.1 Будут сохранены ваши координаты и угол зрения.\n4. Закройте это окно и перемещайтесь в следующий блок-пост.\n\nВАЖНО: Не нажимайте кнопку Сохранить, пока не заполните\nвсе блок-посты! Повторное заполнение будет недоступно.")
 	
 	local crlist = vgui.Create("DListView",pan)
 	crlist:SetMultiSelect(false)
@@ -95,6 +95,129 @@ local function FillDSCPMenu()
 	else
 		crsave:SetEnabled(false)
 	end
+end
+
+local function SchedulePreiewForm(ply_tbl,stations,path,start,last)
+	local frm = vgui.Create("DFrame")
+	frm:SetSize(280,280)
+	frm:Center()
+	frm:SetTitle("Меню диспетчера: подготовка расписания")
+	frm.btnMaxim:SetVisible(false)
+	frm.btnMinim:SetVisible(false)
+	frm:SetVisible(true)
+	frm:SetSizable(false)
+	frm:SetDeleteOnClose(true)
+	frm:SetIcon("icon16/table_gear.png")
+	frm:MakePopup()
+	
+	local pan = vgui.Create("DPanel",frm)
+	pan:SetBackgroundColor(Color(0,0,0,0))
+	pan:Dock(FILL)
+	
+	local lbhead = vgui.Create("DLabel",pan)
+	lbhead:SetPos(5,0)
+	lbhead:SetFont("MDispSmallTitle")
+	lbhead:SetColor(Color(255,255,255))
+	lbhead:SetText("Маршрут № "..ply_tbl.Route.." | Игрок: "..ply_tbl.Nick)
+	lbhead:SetSize(260,25)
+	
+	local hor_line = vgui.Create("DPanel",pan)
+	hor_line:SetPos(5,25)
+	hor_line:SetSize(260,1)
+	hor_line:SetBackgroundColor(Color(255,255,255,255))
+	
+	local lbhead1 = vgui.Create("DLabel",pan)
+	lbhead1:SetPos(5,30)
+	lbhead1:SetFont("MDispSmallTitle")
+	lbhead1:SetColor(Color(255,255,255))
+	lbhead1:SetText("Станция")
+	lbhead1:SizeToContents()
+	local lbhead2 = vgui.Create("DLabel",pan)
+	lbhead2:SetPos(160,30)
+	lbhead2:SetFont("MDispSmallTitle")
+	lbhead2:SetColor(Color(255,255,255))
+	lbhead2:SetText("Выдержка (сек)")
+	lbhead2:SizeToContents()
+	
+	local stationspan = vgui.Create("DScrollPanel",pan)
+	local holdspan = vgui.Create("DScrollPanel",pan)
+	stationspan:SetPos(5,45)
+	holdspan:SetPos(160,45)
+	local ht = 0
+	
+	local line = math.floor(start/100)
+	local init_nid = stations[line][path][start].NodeID
+	local last_nid = stations[line][path][last].NodeID
+	for k,v in SortedPairsByMemberValue(stations[line][path],"NodeID") do
+		if v.NodeID < init_nid then continue end
+		if v.NodeID >= init_nid and v.NodeID <= last_nid then
+			local lb1 = stationspan:Add("DLabel")
+			lb1:SetText(v.Name)
+			lb1:SetTextColor(Color(255,255,255))
+			lb1:Dock(TOP)
+			lb1:DockMargin(0,5,20,0)
+			
+			local hold = holdspan:Add("DTextEntry")
+			hold:SetNumeric(true)
+			hold:SetValue(0)
+			hold:Dock(TOP)
+			hold:DockMargin(50,5,0,0)
+			hold.station = k
+			
+			ht = ht+25
+			stationspan:SetSize(160,ht)
+			holdspan:SetSize(100,ht)
+			
+		end
+	end
+	
+	ht = ht + 55
+	local lbfoot = vgui.Create("DLabel",pan)
+	lbfoot:SetPos(5,ht)
+	lbfoot:SetFont("MDispSmallTitle")
+	lbfoot:SetColor(Color(255,255,255))
+	lbfoot:SetText("Комментарий:")
+	lbfoot:SizeToContents()
+	
+	ht = ht + 20
+	local comm = vgui.Create("DTextEntry",pan) -- TODO
+	comm:SetPos(5,ht)
+	comm:SetSize(126,25)
+	comm:SetPlaceholderText("TODO")
+	comm.AllowInput = function()
+		if utf8.len(comm:GetText()) == 10 then -- ограничение подберу позже, когда будет готово отображение на панели
+			return true
+		end
+	end
+	
+	ht = ht + 35
+	local send = vgui.Create("DButton",pan)
+	send:SetSize(100,25)
+	send:SetPos((pan:GetWide()/2),ht)
+	send:SetText("Отправить")
+	send.DoClick = function()
+		local holds = {}
+		for k,cbox in pairs(holdspan:GetCanvas():GetChildren()) do
+			if not holds[cbox.station] then holds[cbox.station] = cbox:GetInt() end
+		end
+		net.Start("MDispatcher.Commands")
+			net.WriteString("sched-send")
+			net.WriteString(ply_tbl.SID)
+			net.WriteInt(path,3)
+			net.WriteInt(start,11)
+			net.WriteInt(last,11)
+			net.WriteTable(holds)
+		net.SendToServer()
+		frm:Close()
+	end
+	local cancel = vgui.Create("DButton",pan)
+	cancel:SetSize(100,25)
+	cancel:SetPos((pan:GetWide()/2)+105,ht)
+	cancel:SetText("Отменить")
+	cancel.DoClick = function()
+		frm:Close()
+	end
+	frm:SetSize(280,80+ht-15)
 end
 
 local function DispatcherMenu(routes,stations)
@@ -238,7 +361,7 @@ local function DispatcherMenu(routes,stations)
 	setdispbox:SetSize(170,25)
 	setdispbox:SetValue("Выберите игрока")
 	for _,ply in ipairs(player.GetAll()) do
-		setdispbox:AddChoice(ply:Nick())
+		setdispbox:AddChoice(ply:Nick(),ply:SteamID())
 	end
 	if not LocalPlayer():query("ulx disp") then setdispbox:SetEnabled(false) end
 	
@@ -248,9 +371,10 @@ local function DispatcherMenu(routes,stations)
 	setdisp:SetText("Назначить")
 	setdisp:SetEnabled(false)
 	setdisp.DoClick = function()
+		local _,sid = setdispbox:GetSelected()
 		net.Start("MDispatcher.Commands")
 			net.WriteString("set-disp")
-			net.WriteString(setdispbox:GetSelected())
+			net.WriteString(sid)
 		net.SendToServer()
 		idisp:SetEnabled(false)
 		setdisp:SetEnabled(false)
@@ -286,7 +410,9 @@ local function DispatcherMenu(routes,stations)
 	ply_dscp:SetSize(170,25)
 	ply_dscp:SetValue("Выберите игрока")
 	for _,ply in ipairs(player.GetAll()) do
-		ply_dscp:AddChoice(ply:Nick())
+		if not ply:GetNW2Bool("MDispatcher") then
+			ply_dscp:AddChoice(ply:Nick(),ply:SteamID())
+		end
 	end
 	
 	local set_dscp = vgui.Create("DButton",disp_panel)
@@ -295,10 +421,11 @@ local function DispatcherMenu(routes,stations)
 	set_dscp:SetText("Назначить")
 	set_dscp:SetEnabled(false)
 	set_dscp.DoClick = function()
+		local _,sid = ply_dscp:GetSelected()
 		net.Start("MDispatcher.Commands")
 			net.WriteString("dscp-post-set")
 			net.WriteString(st_dscp:GetSelected())
-			net.WriteString(ply_dscp:GetSelected())
+			net.WriteString(sid)
 		net.SendToServer()
 		frame:Close()
 	end
@@ -435,7 +562,7 @@ local function DispatcherMenu(routes,stations)
 	sched_player:SetValue("Выберите маршрут")
 	
 	for k,v in pairs(routes) do
-		sched_player:AddChoice(v.." | "..k)
+		sched_player:AddChoice(v.Route.." | "..v.Nick,{SID=k,Nick=v.Nick,Route=v.Route})
 	end
 	
 	local hor_line2 = vgui.Create("DPanel",sched_panel)
@@ -509,16 +636,12 @@ local function DispatcherMenu(routes,stations)
 	sched_get:SetSize(150,25)
 	sched_get:SetPos((sched_panel:GetWide()/2)-(sched_get:GetWide()/2)-12,200)
 	sched_get:SetEnabled(false)
-	sched_get:SetText("Генерировать")
+	sched_get:SetText("Показать")
 	sched_get.DoClick = function()
-		net.Start("MDispatcher.Commands")
-			net.WriteString("sched-generate")
-			net.WriteString(string.Explode(" | ",sched_player:GetSelected())[2])
-			net.WriteInt(sched_path:GetSelected(),3)
-			net.WriteString(sched_start:GetSelected())
-			net.WriteString(sched_last:GetSelected())
-		net.SendToServer()
-		frame:Close()
+		local _,tab = sched_player:GetSelected()
+		local _,start = sched_start:GetSelected()
+		local _,last = sched_last:GetSelected()
+		SchedulePreiewForm(tab,stations,sched_path:GetSelected(),start,last)
 	end
 	
 	-- динамическое заполнение и блокировки
@@ -540,7 +663,7 @@ local function DispatcherMenu(routes,stations)
 		sched_start:Clear()
 		sched_start:SetValue("Выберите станцию")
 		for k,v in SortedPairsByMemberValue(stations[tonumber(sched_line:GetSelected())][tonumber(sched_path:GetSelected())],"NodeID") do
-			sched_start:AddChoice(v.Name)
+			sched_start:AddChoice(v.Name,k)
 		end
 		sched_start:SetEnabled(true)
 		sched_last:SetEnabled(false)
@@ -551,14 +674,16 @@ local function DispatcherMenu(routes,stations)
 		sched_last:SetValue("Выберите станцию")
 		for k,v in SortedPairsByMemberValue(stations[tonumber(sched_line:GetSelected())][tonumber(sched_path:GetSelected())],"NodeID") do
 			if v.Name ~= sched_start:GetSelected() then
-				sched_last:AddChoice(v.Name)
+				sched_last:AddChoice(v.Name,k)
 			end
 		end
 		sched_last:SetEnabled(true)
 		sched_get:SetEnabled(false)
 	end
 	sched_last.OnSelect = function()
-		sched_get:SetEnabled(true)
+		if LocalPlayer():GetNW2Bool("MDispatcher") then
+			sched_get:SetEnabled(true)
+		end
 	end
 end
 
@@ -578,10 +703,7 @@ net.Receive("MDispatcher.Commands",function()
 		FillDSCPMenu()
 	elseif comm == "cr-save-ok" then
 		Derma_Message("Блок-посты сохранены успешно! Чтобы увидеть изменения, пожалуйста перезайдите на сервер.", "Меню диспетчера", "OK")
-	elseif comm == "sched-pre-send" then
-		local nick = net.ReadString()
-		local ln = net.ReadUInt(32)
-		local sched = util.JSONToTable(util.Decompress(net.ReadData(ln)))
-		local ftime = net.ReadInt(13)
+	elseif comm == "sched-send-ok" then
+		Derma_Message("Расписание успешно отправлено!", "Меню диспетчера", "OK")
 	end
 end)
