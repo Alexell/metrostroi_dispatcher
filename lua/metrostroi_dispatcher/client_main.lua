@@ -97,10 +97,11 @@ function DispPanel:Paint(w,h)
 	draw.RoundedBox(5,0,0,w,h,Color(0,0,0,150))
 end
 
+local dscpx,dscpy
 function DispPanel:PerformLayout()
 	self:SetSize(250,50)
-	--self:SetPos(ScrW() - self:GetWide() - 5, ScrH() - (ScrH()/2) - self:GetTall() - 5)
-	self:SetPos(ScrW() - self:GetWide() - 5, 200)
+	dscpx,dscpy = MDispatcher.DSCPPanel:GetPos()
+	self:SetPos(ScrW() - self:GetWide() - 5, dscpy - self:GetTall() - 10)
 	self.Disp:SetPos(10,5)
 	self.Disp:SetTextColor(Color(255,255,255,255))
 	self.Disp:SetWide(240)

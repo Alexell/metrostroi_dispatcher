@@ -46,9 +46,15 @@ function MDispatcher.StationNameByIndex(index)
 	local StationName
 	for k,v in pairs(Metrostroi.StationConfigurations) do
 		local CurIndex = tonumber(k)
-		if not CurIndex or not istable(v) or not v.names or not istable(v.names) or table.Count(v.names) < 1 then StationName = k else StationName = v.names[1] end
-		if CurIndex == index then return StationName end
+		if CurIndex and CurIndex == index then
+			if istable(v) and v.names and istable(v.names) and table.Count(v.names) > 0 then
+				StationName = v.names[1]
+			else
+				StationName = index
+			end
+		end
 	end
+	return StationName and StationName or index
 end
 
 -- индекс станции по названию

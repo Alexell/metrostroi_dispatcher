@@ -122,14 +122,14 @@ function SchedPanel:Update(sched,ftime,btime,holds)
 	for k,v in pairs(sched) do
 		self:AddRow(v.Name,v.Time,hl and holds[v.ID] or false)
 		height = height + 22
-		self.Stations:SetSize(hl and 150 or 184,height)
+		self.Stations:SetSize(hl and 150 or 182,height)
 		self.Times:SetSize(50,height)
 		self.Holds:SetSize(hl and 30 or 0,hl and height or 0)
 	end
 	self:AddRow("","",false,true)
 	self:AddRow("Отправление",btime,false,true)
 	height = height + 34
-	self.Stations:SetSize(hl and 150 or 184,height)
+	self.Stations:SetSize(hl and 150 or 182,height)
 	self.Times:SetSize(50,height)
 	self.Holds:SetSize(hl and 30 or 0,hl and height or 0)
 	ClearScheduleTimer(ftime+60)

@@ -326,6 +326,9 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 		local name = net.ReadString()
 		for k,v in pairs(MDispatcher.ControlRooms) do
 			if v.Name == name then
+				if IsValid(ply:GetVehicle()) then
+					ply:ExitVehicle()
+				end
 				ply:SetPos(v.Pos)
 				ply:SetEyeAngles(v.Ang)
 				ply:SetMoveType(2)
@@ -477,6 +480,14 @@ local function BuildStationsTable()
 					if MDispatcher.Stations[LineID][Path+1][StationID] == nil then
 						MDispatcher.Stations[LineID][Path+1][StationID] = MDispatcher.Stations[LineID][Path][StationID]
 					end
+				end
+				if LineID == 1 and Path == 1 and StationID == 155 then
+					MDispatcher.Stations[LineID][Path][StationID].NodeID = 700
+					MDispatcher.Stations[LineID][Path][StationID].Node.id = 700
+				end
+				if LineID == 1 and Path == 1 and StationID == 156 then
+					MDispatcher.Stations[LineID][Path][StationID].NodeID = 800
+					MDispatcher.Stations[LineID][Path][StationID].Node.id = 800
 				end
 			end
 		end

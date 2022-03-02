@@ -23,7 +23,7 @@ end
 
 function DSCPPanel:PerformLayout()
 	self:SetSize(250,height)
-	self:SetPos(ScrW() - self:GetWide() - 5, 255)
+	self:SetPos(ScrW() - self:GetWide() - 5, ScrH() - (ScrH()/2) - self:GetTall() - 5)
 	
 	self.Title:SizeToContents()
 	self.Title:SetPos((self:GetWide()/ 2) - (self.Title:GetWide() / 2), 5)
