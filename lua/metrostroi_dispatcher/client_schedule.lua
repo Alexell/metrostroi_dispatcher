@@ -39,9 +39,8 @@ end
 function SchedPanel:PerformLayout()
 	self:SetSize(250,height)
 	self:SetPos(ScrW() - self:GetWide() - 5, ScrH() - (ScrH()/2) + 5)
-	
+
 	self.Stations:SetPos(10,35)
-	self.Times:SetPos(163,35)
 	self.Holds:SetPos(220,35)
 	local sb1 = self.Stations:GetVBar()
 	sb1:SetSize(0,0)
@@ -79,16 +78,29 @@ function SchedPanel:AddRow(nm,tm,hl,sp)
 	lb2:Dock(TOP)
 	if not sp then lb2:DockMargin(0,0,0,2)
 	else lb2:DockMargin(0,-4,0,-4) end
-	local lb3 = self.Holds:Add("DLabel")
-	lb3:SetFont("MDispSmall")
-	if hl > 0 then
-		lb3:SetText(hl.."с")
-	else
-		lb3:SetText("")
+	if hl then
+		local lb3 = self.Holds:Add("DLabel")
+		lb3:SetFont("MDispSmall")
+		local m,s
+		if hl > 0 then
+			if hl > 60 then
+				m = math.floor(hl/60)
+				s = hl-(60*m)
+				if s < 10 then s = "0"..s end
+				hl = m.."."..s
+			elseif hl == 60 then
+				hl = "1м"
+			elseif hl < 60 then
+				hl = hl.."с"
+			end
+			lb3:SetText(hl)
+		else
+			lb3:SetText("")
+		end
+		lb3:SetTextColor(Color(255,216,0))
+		lb3:Dock(TOP)
+		lb3:DockMargin(0,0,0,2)
 	end
-	lb3:SetTextColor(Color(255,216,0))
-	lb3:Dock(TOP)
-	lb3:DockMargin(0,0,0,2)
 end
 
 function SchedPanel:Update(sched,ftime,btime,holds)
@@ -98,20 +110,28 @@ function SchedPanel:Update(sched,ftime,btime,holds)
 	self.Times:Clear()
 	self.Holds:Clear()
 	height = 35
-	for k,v in pairs(sched) do
-		print("v.ID="..v.ID.." | v.Name="..v.Name.." | v.Time="..v.Time.." | HL="..holds[v.ID])
-		self:AddRow(v.Name,v.Time,holds[v.ID])
-		height = height + 22
-		self.Stations:SetSize(150,height)
-		self.Times:SetSize(50,height)
-		self.Holds:SetSize(30,height)
+	local hl = false
+	for k,v in pairs(holds) do
+		if v > 0 then hl = true break end
 	end
-	self:AddRow("","",0,true)
-	self:AddRow("Отправление",btime,0,true)
+	if hl then
+		self.Times:SetPos(163,35)
+	else
+		self.Times:SetPos(194,35)
+	end
+	for k,v in pairs(sched) do
+		self:AddRow(v.Name,v.Time,hl and holds[v.ID] or false)
+		height = height + 22
+		self.Stations:SetSize(hl and 150 or 184,height)
+		self.Times:SetSize(50,height)
+		self.Holds:SetSize(hl and 30 or 0,hl and height or 0)
+	end
+	self:AddRow("","",false,true)
+	self:AddRow("Отправление",btime,false,true)
 	height = height + 34
-	self.Stations:SetSize(150,height)
+	self.Stations:SetSize(hl and 150 or 184,height)
 	self.Times:SetSize(50,height)
-	self.Holds:SetSize(30,height)
+	self.Holds:SetSize(hl and 30 or 0,hl and height or 0)
 	ClearScheduleTimer(ftime+60)
 end
 vgui.Register("MDispatcher.SchedulePanel",SchedPanel,"Panel")

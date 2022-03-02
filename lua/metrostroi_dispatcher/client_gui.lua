@@ -163,11 +163,12 @@ local function SchedulePreiewForm(ply_tbl,stations,path,start,last)
 			hold:Dock(TOP)
 			hold:DockMargin(50,5,0,0)
 			hold.station = k
-			
+			if v.NodeID == init_nid or v.NodeID == last_nid then
+				hold:SetEnabled(false)
+			end
 			ht = ht+25
 			stationspan:SetSize(160,ht)
 			holdspan:SetSize(100,ht)
-			
 		end
 	end
 	
@@ -198,7 +199,7 @@ local function SchedulePreiewForm(ply_tbl,stations,path,start,last)
 	send.DoClick = function()
 		local holds = {}
 		for k,cbox in pairs(holdspan:GetCanvas():GetChildren()) do
-			if not holds[cbox.station] then holds[cbox.station] = cbox:GetInt() end
+			if not holds[cbox.station] then holds[cbox.station] = MDispatcher.RoundSeconds(tonumber(cbox:GetInt()) and cbox:GetInt() or 0) end -- защита от пустого поля
 		end
 		net.Start("MDispatcher.Commands")
 			net.WriteString("sched-send")
@@ -560,9 +561,12 @@ local function DispatcherMenu(routes,stations)
 	sched_player:SetPos(5,50)
 	sched_player:SetSize(170,25)
 	sched_player:SetValue("Выберите маршрут")
-	
+	local ply
 	for k,v in pairs(routes) do
-		sched_player:AddChoice(v.Route.." | "..v.Nick,{SID=k,Nick=v.Nick,Route=v.Route})
+		ply = player.GetBySteamID(k)
+		if not ply:GetNW2Bool("MDispatcher") then
+			sched_player:AddChoice(v.Route.." | "..v.Nick,{SID=k,Nick=v.Nick,Route=v.Route})
+		end
 	end
 	
 	local hor_line2 = vgui.Create("DPanel",sched_panel)

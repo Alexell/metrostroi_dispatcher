@@ -141,7 +141,7 @@ function MDispatcher.UnDisp(ply,target)
 		local msg = "игрок "..MDispatcher.Dispatcher.." покинул пост Диспетчера."
 		if IsValid(ply) then
 			if ply:Nick() ~= target:Nick() then
-				if (ply:query("ulx disp")) then
+				if (ply:IsAdmin()) then
 					msg = ply:Nick().." снял игрока "..MDispatcher.Dispatcher.." с поста Диспетчера."
 					target:SetNW2Bool("MDispatcher",false)
 				else
@@ -356,10 +356,9 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 		local path = net.ReadInt(3)
 		local start = net.ReadInt(11)
 		local last = net.ReadInt(11)
-		local holds = net.ReadTable()
-		PrintTable(holds)
+		local hl = net.ReadTable()
 		local tar = player.GetBySteamID(sid)
-		local sched,ftime,btime = MDispatcher.GenerateSimpleSched(start,path,last,holds)
+		local sched,ftime,btime,holds = MDispatcher.GenerateSimpleSched(start,path,last,hl)
 		net.Start("MDispatcher.ScheduleData")
 			local tbl = util.Compress(util.TableToJSON(sched))
 			local ln = #tbl
@@ -377,6 +376,10 @@ end)
 
 function MDispatcher.GetSchedule(ply)
 	if not IsValid(ply) then return end
+	if MDispatcher.ActiveDispatcher then
+		ply:ChatPrint("Вы не можете получить расписание, поскольку ДЦХ на посту!")
+		return
+	end
     local train = ply:GetTrain()
 	if not IsValid(train) then
 		ply:ChatPrint("Поезд не обнаружен!\nПолучить расписание можно только находясь в кресле машиниста.")
@@ -392,7 +395,7 @@ function MDispatcher.GetSchedule(ply)
 		ply:ChatPrint("Не удалось получить номер пути!")
 		return
 	end
-	local sched,ftime,btime = MDispatcher.GenerateSimpleSched(station,path)
+	local sched,ftime,btime,holds = MDispatcher.GenerateSimpleSched(station,path)
 	net.Start("MDispatcher.ScheduleData")
 		local tbl = util.Compress(util.TableToJSON(sched))
 		local ln = #tbl
@@ -400,6 +403,7 @@ function MDispatcher.GetSchedule(ply)
 		net.WriteData(tbl,ln)
 		net.WriteString(ftime)
 		net.WriteString(btime)
+		net.WriteTable(holds)
 	net.Send(ply)
 end
 
@@ -497,14 +501,6 @@ local function ConvertTime()
 	return converted_time
 end
 
--- округление секунд до 0 и 5
-local function RoundSeconds(number)
-    local mod = number % 10
-    if mod < 5 then number = number + (5 - mod) end
-    if mod > 5 then number = number + (10 - mod) end
-    return number
-end
-
 -- получаем ID последней станции в порядке следования
 local function GetLastStationID(line_id,path)
 	local i = 0
@@ -542,15 +538,15 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 		if v.NodeID == last_node.id then
 			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + (station_time/2)
 			full_time = full_time + travel_time
-			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",RoundSeconds(init_time + full_time))})
+			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",MDispatcher.RoundSeconds(init_time + full_time))})
 			break
 		end
-		table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",RoundSeconds(init_time + full_time))})
+		table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",MDispatcher.RoundSeconds(init_time + full_time))})
 		prev_node = v.Node
 	end
-	back_time = os.date("%X", RoundSeconds(init_time + full_time + 120))
-	full_time = RoundSeconds(full_time)
-	return sched_massiv, full_time, back_time
+	back_time = os.date("%X", MDispatcher.RoundSeconds(init_time + full_time + 120))
+	full_time = MDispatcher.RoundSeconds(full_time)
+	return sched_massiv, full_time, back_time, holds and holds or {}
 end
 
 -- Временный дебаг

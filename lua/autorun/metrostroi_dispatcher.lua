@@ -59,3 +59,11 @@ function MDispatcher.StationIndexByName(name)
 		if table.HasValue(v.names,name) or k == name then return k end
 	end
 end
+
+-- округление секунд до 0 и 5
+function MDispatcher.RoundSeconds(number)
+    local mod = number % 10
+    if mod > 0 and mod < 5 then number = number + (5 - mod) end
+    if mod > 5 then number = number + (10 - mod) end
+    return number
+end
