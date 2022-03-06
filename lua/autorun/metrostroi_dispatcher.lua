@@ -42,10 +42,11 @@ end
 
 -- название станции по индексу
 function MDispatcher.StationNameByIndex(index)
-	if not Metrostroi.StationConfigurations then return end
+	if not Metrostroi.StationConfigurations then return index end
 	local StationName
+	local CurIndex
 	for k,v in pairs(Metrostroi.StationConfigurations) do
-		local CurIndex = tonumber(k)
+		CurIndex = tonumber(k)
 		if CurIndex and CurIndex == index then
 			if istable(v) and v.names and istable(v.names) and table.Count(v.names) > 0 then
 				StationName = v.names[1]
@@ -59,7 +60,7 @@ end
 
 -- индекс станции по названию
 function MDispatcher.StationIndexByName(name)
-	if not Metrostroi.StationConfigurations then return end
+	if not Metrostroi.StationConfigurations then return name end
 	for k,v in pairs(Metrostroi.StationConfigurations) do
 		if not tonumber(k) or not istable(v) or not v.names or not istable(v.names) or table.Count(v.names) < 1 then continue end
 		if table.HasValue(v.names,name) or k == name then return k end

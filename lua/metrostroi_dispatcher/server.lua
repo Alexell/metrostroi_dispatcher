@@ -6,6 +6,7 @@
 -- Source code: https://github.com/Alexell/metrostroi_dispatcher
 ----------------------------------------------------------------------
 
+local debug_enabled = CreateConVar("mdispatcher_debug", 0, FCVAR_ARCHIVE, "Enable debug in server console")
 util.AddNetworkString("MDispatcher.DispData")
 util.AddNetworkString("MDispatcher.ScheduleData")
 util.AddNetworkString("MDispatcher.ClearSchedule")
@@ -379,6 +380,14 @@ end)
 
 function MDispatcher.GetSchedule(ply)
 	if not IsValid(ply) then return end
+	if not Metrostroi.StationConfigurations then
+		ply:ChatPrint("Карта не сконфигурирована!")
+		return
+	end
+	if #MDispatcher.Stations == 0 then
+		ply:ChatPrint("Отсутствуют данные для создания расписания!")
+		return
+	end
 	if MDispatcher.ActiveDispatcher then
 		ply:ChatPrint("Вы не можете получить расписание, поскольку ДЦХ на посту!")
 		return
@@ -415,40 +424,10 @@ function MDispatcher.ClearSchedule(ply)
 	net.Send(ply)
 end
 
-local function PLLFix()
-	local already_fixed = false -- фикс повторной сработки во время игры
-	for _, ent in pairs(ents.FindByClass("gmod_track_platform")) do
-		if not IsValid(ent) then continue end
-		
-		-- фикс координат на 158/2
-		if ent.StationIndex == 158 and ent.PlatformIndex == 2 then
-			ent:SetPos(ent:GetPos()+Vector(0,-100,0))
-			ent.PlatformStart = Vector(28.43,14169.9,-6721.3)
-			ent:SetNW2Vector("PlatformStart",ent.PlatformStart)
-			ent.PlatformEnd = Vector(4955.4,14174.3,-6722.9)
-			ent:SetNW2Vector("PlatformEnd",ent.PlatformEnd)
-		end
-		
-		-- отделяем 2 линию
-		if ent.StationIndex > 200 then already_fixed = 1 break end
-		if ent.StationIndex > 156 then
-			ent.StationIndex = ent.StationIndex+100
-			ent:SetNWInt("StationIndex",ent.StationIndex)
-		end
-	end
-	
-	if already_fixed then return end
-	local StationConfig = {}
-	for k,v in pairs(Metrostroi.StationConfigurations) do
-		if not tonumber(k) or k <= 156 then StationConfig[k] = v continue end
-		if k > 156 then StationConfig[k+100] = v end
-	end
-	Metrostroi.StationConfigurations = StationConfig
-	StationConfig = nil
-end
-
 -- собираем нужную инфу по станциям
 local function BuildStationsTable()
+	if #Metrostroi.Paths == 0 then return end
+	if not Metrostroi.StationConfigurations then return end
 	local distance = 600
 	local LineID 
 	local Path
@@ -459,6 +438,12 @@ local function BuildStationsTable()
 		if not IsValid(ent) then continue end
 		-- ищем номер линии (вдруг их две)
 		LineID = math.floor(ent.StationIndex/100)
+		
+		-- фикс для b50
+		if game.GetMap():find("metrostroi_b50") then
+			if LineID > 1 then continue end
+		end
+		
 		if MDispatcher.Stations[LineID] == nil then MDispatcher.Stations[LineID] = {} end
 		-- ищем путь
 		Path = ent.PlatformIndex
@@ -506,7 +491,7 @@ end
 
 -- получаем ко-во секунд в текущих сутках
 local function ConvertTime()
-	local tbl = os.date("!*t")
+	local tbl = os.date("!*t",Metrostroi.GetSyncTime())
 	local converted_time = tbl.hour*3600 + tbl.min*60 + tbl.sec
 	--print(os.date("%X", converted_time))
 	return converted_time
@@ -523,6 +508,7 @@ end
 
 -- генерируем расписание
 function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
+	if #MDispatcher.Stations == 0 then return end
 	local line_id = math.floor(station_start/100)
 	local init_node = MDispatcher.Stations[line_id][path][station_start].Node
 	local prev_node
@@ -560,9 +546,16 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 	return sched_massiv, full_time, back_time, holds and holds or {}
 end
 
--- Временный дебаг
+-- Дебаг в консоль сервера
 local function PrintDebugInfo()
-	---- DEBUG START ----
+	if debug_enabled:GetInt() == 0 then return end
+	print("")
+	print("===== MDispatcher Debug START =====")
+	print("")
+	print("--------------")
+	print("Stations Table:")
+	print("--------------")
+	print("")
 	for a,b in pairs(MDispatcher.Stations) do
 		print("Line: "..a.."\n")
 		for c,d in pairs(b) do
@@ -572,34 +565,94 @@ local function PrintDebugInfo()
 			end
 			print("")
 		end
-		print("------------\n")
 	end
-
-	--[[print("StationConfigurations:")
+	print("---------------------")
+	print("StationConfigurations:")
+	print("---------------------")
+	print("")
 	local stationstable = {}
 	for k,v in pairs(Metrostroi.StationConfigurations) do
-		if v.names[name_num] then
-			table.insert(stationstable,{id = tostring(k), name = tostring(v.names[name_num])})
-		else
-			table.insert(stationstable,{id = tostring(k), name = tostring(v.names[1])})
-		end
+		table.insert(stationstable,{id = tostring(k), name = tostring(v.names[1])})
 	end 
 	table.SortByMember(stationstable, "id",true)
-	timer.Simple(0.1, function() 
-		for k,v in pairs(stationstable) do
-			print(v.id.." - "..v.name)
-		end
-	end)
-	print("------------\n")
-	local tab = MDispatcher.GenerateSimpleSched(802, 1)
-	for k, v in pairs(tab) do
-		human_time = os.date("%X", v.Time)
-		print(v.Name:sub(1,18)..": "..human_time)
-	end]]
-	---- DEBUG END ----
+	for k,v in pairs(stationstable) do
+		print(v.id.." - "..v.name)
+	end
+	print("---------------------")
+	print("")
+	print("===== MDispatcher Debug END =====")
+	print("")
 end
 
--- таймеры
+-- фиксы на картах
+local function PLLFix()
+	local already_fixed = false -- фикс повторной сработки во время игры
+	for _, ent in pairs(ents.FindByClass("gmod_track_platform")) do
+		if not IsValid(ent) then continue end
+		
+		-- фикс координат на 158/2
+		if ent.StationIndex == 158 and ent.PlatformIndex == 2 then
+			ent:SetPos(ent:GetPos()+Vector(0,-100,0))
+			ent.PlatformStart = Vector(28.43,14169.9,-6721.3)
+			ent:SetNW2Vector("PlatformStart",ent.PlatformStart)
+			ent.PlatformEnd = Vector(4955.4,14174.3,-6722.9)
+			ent:SetNW2Vector("PlatformEnd",ent.PlatformEnd)
+		end
+		
+		-- отделяем 2 линию
+		if ent.StationIndex > 200 then already_fixed = 1 break end
+		if ent.StationIndex > 156 then
+			ent.StationIndex = ent.StationIndex+100
+			ent:SetNWInt("StationIndex",ent.StationIndex)
+		end
+	end
+	
+	if already_fixed then return end
+	local StationConfig = {}
+	for k,v in pairs(Metrostroi.StationConfigurations) do
+		if not tonumber(k) or k <= 156 then StationConfig[k] = v continue end
+		if k > 156 then StationConfig[k+100] = v end
+	end
+	Metrostroi.StationConfigurations = StationConfig
+	StationConfig = nil
+end
+
+local function CrosslineReduxFix()
+	for _, ent in pairs(ents.FindByClass("gmod_track_platform")) do
+		if not IsValid(ent) then continue end
+		if ent.StationIndex > 107 then
+			ent.StationIndex = ent.StationIndex - 9
+			ent:SetNWInt("StationIndex",ent.StationIndex)
+		end
+	end
+end
+
+local function NVLFix()
+	local already_fixed = false -- фикс повторной сработки во время игры
+	for _, ent in pairs(ents.FindByClass("gmod_track_platform")) do
+		if not IsValid(ent) then continue end
+		-- отделяем 2 линию
+		if ent.StationIndex > 900 then already_fixed = 1 break end
+		if ent.StationIndex > 810 then
+			ent.StationIndex = ent.StationIndex+100
+			ent:SetNWInt("StationIndex",ent.StationIndex)
+		end
+	end
+	
+	if already_fixed then return end
+	local StationConfig = {}
+	for k,v in pairs(Metrostroi.StationConfigurations) do
+		if not tonumber(k) or k <= 810 then StationConfig[k] = v continue end
+		if k > 810 then StationConfig[k+100] = v end
+	end
+	Metrostroi.StationConfigurations = StationConfig
+	StationConfig = nil
+end
+
 if game.GetMap():find("jar_pll_remastered") then timer.Simple(0.1,PLLFix) end
-timer.Simple(4,BuildStationsTable)
-timer.Simple(6,PrintDebugInfo)
+if game.GetMap():find("crossline_r199h") then timer.Simple(0.1,CrosslineReduxFix) end
+if game.GetMap():find("metronvl") then timer.Simple(0.1,NVLFix) end
+
+-- запуск сбора данных
+timer.Simple(10,BuildStationsTable)
+timer.Simple(10+2,PrintDebugInfo)
