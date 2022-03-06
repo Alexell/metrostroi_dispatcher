@@ -183,10 +183,10 @@ local function SchedulePreiewForm(ply_tbl,stations,path,start,last)
 	ht = ht + 20
 	local comm = vgui.Create("DTextEntry",pan) -- TODO
 	comm:SetPos(5,ht)
-	comm:SetSize(126,25)
+	comm:SetSize(256,25)
 	comm:SetPlaceholderText("TODO")
 	comm.AllowInput = function()
-		if utf8.len(comm:GetText()) == 10 then -- ограничение подберу позже, когда будет готово отображение на панели
+		if utf8.len(comm:GetText()) == 30 then
 			return true
 		end
 	end
@@ -208,6 +208,7 @@ local function SchedulePreiewForm(ply_tbl,stations,path,start,last)
 			net.WriteInt(start,11)
 			net.WriteInt(last,11)
 			net.WriteTable(holds)
+			net.WriteString(comm:GetText())
 		net.SendToServer()
 		frm:Close()
 	end

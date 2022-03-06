@@ -30,6 +30,14 @@ size = 14,
 weight = 500
 })
 
+surface.CreateFont("MDispSmallIt",{
+font = "Trebuchet",
+extended = false,
+italic = true,
+size = 15,
+weight = 500
+})
+
 local function DPanelSetData()
 	if not IsValid(MDispatcher.DPanel) then return end
 	MDispatcher.DPanel.Disp:SetText("Диспетчер: "..MDispatcher.Dispatcher)

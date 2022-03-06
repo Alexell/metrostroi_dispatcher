@@ -24,8 +24,9 @@ function SchedPanel:Init()
 	self.Stations = vgui.Create("DScrollPanel",self)
 	self.Times = vgui.Create("DScrollPanel",self)
 	self.Holds = vgui.Create("DScrollPanel",self)
-	self.Default = vgui.Create("DLabel",self)
-	self.Default:SetFont("MDispSmallTitle")
+	self.Comment = vgui.Create("DLabel",self)
+	self.Comment:SetFont("MDispSmallIt")
+	self.Comment:SetText("Нет активного расписания.")
 	self.Route = vgui.Create("DLabel",self)
 	self.Route:SetFont("MDispSmallTitle")
 	self.Route:SetText("")
@@ -40,8 +41,6 @@ function SchedPanel:PerformLayout()
 	self:SetSize(250,height)
 	self:SetPos(ScrW() - self:GetWide() - 5, ScrH() - (ScrH()/2) + 5)
 
-	self.Stations:SetPos(10,35)
-	self.Holds:SetPos(220,35)
 	local sb1 = self.Stations:GetVBar()
 	sb1:SetSize(0,0)
 	local sb2 = self.Times:GetVBar()
@@ -49,14 +48,12 @@ function SchedPanel:PerformLayout()
 	local sb3 = self.Holds:GetVBar()
 	sb3:SetSize(0,0)
 
-	self.Default:SetPos(10,25)
-	self.Default:SetWide(200)
-	self.Default:SetText("Нет активного расписания.")
-	self.Default:SetTextColor(Color(255,255,255))
+	self.Comment:SetPos(10,25)
+	self.Comment:SetWide(230)
+	self.Comment:SetTextColor(Color(255,255,255))
 	self.Route:SetPos(10,5)
 	self.Route:SetWide(110)
 	self.Route:SetTextColor(Color(255,255,255))
-	self.FTime:SetPos(120,5)
 	self.FTime:SetTextColor(Color(255,255,255))
 	self.FTime:SetWide(130)
 	
@@ -103,21 +100,32 @@ function SchedPanel:AddRow(nm,tm,hl,sp)
 	end
 end
 
-function SchedPanel:Update(sched,ftime,btime,holds)
-	self.Default:SetVisible(false)
+function SchedPanel:Update(sched,ftime,btime,holds,comm)
+	local ftime_y = 5
+	local scrolls_y = 35
+	self.Comment:SetVisible(false)
+	if comm ~= "" then
+		self.Comment:SetVisible(true)
+		self.Comment:SetText(comm)
+		ftime_y = 45
+		scrolls_y = 65
+	end
+	self.FTime:SetPos(120,ftime_y)
 	self.FTime:SetText("Время хода: "..os.date("%M:%S",ftime))
 	self.Stations:Clear()
+	self.Stations:SetPos(10,scrolls_y)
 	self.Times:Clear()
 	self.Holds:Clear()
+	self.Holds:SetPos(220,scrolls_y)
 	height = 35
 	local hl = false
 	for k,v in pairs(holds) do
 		if v > 0 then hl = true break end
 	end
 	if hl then
-		self.Times:SetPos(163,35)
+		self.Times:SetPos(163,scrolls_y)
 	else
-		self.Times:SetPos(194,35)
+		self.Times:SetPos(194,scrolls_y)
 	end
 	for k,v in pairs(sched) do
 		self:AddRow(v.Name,v.Time,hl and holds[v.ID] or false)
@@ -142,7 +150,8 @@ net.Receive("MDispatcher.ScheduleData",function()
 	local ft = net.ReadString()
 	local bt = net.ReadString()
 	local hl = net.ReadTable()
-	MDispatcher.SPanel:Update(tbl,ft,bt,hl)
+	local cm = net.ReadString()
+	MDispatcher.SPanel:Update(tbl,ft,bt,hl,cm)
 end)
 
 net.Receive("MDispatcher.ClearSchedule",function()
