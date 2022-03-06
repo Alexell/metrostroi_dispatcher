@@ -25,8 +25,10 @@ function SchedPanel:Init()
 	self.Times = vgui.Create("DScrollPanel",self)
 	self.Holds = vgui.Create("DScrollPanel",self)
 	self.Comment = vgui.Create("DLabel",self)
+	self.Comment:SetPos(10,25)
 	self.Comment:SetFont("MDispSmallIt")
 	self.Comment:SetText("Нет активного расписания.")
+	self.Comment:SetTextColor(Color(255,255,255))
 	self.Route = vgui.Create("DLabel",self)
 	self.Route:SetFont("MDispSmallTitle")
 	self.Route:SetText("")
@@ -48,15 +50,13 @@ function SchedPanel:PerformLayout()
 	local sb3 = self.Holds:GetVBar()
 	sb3:SetSize(0,0)
 
-	self.Comment:SetPos(10,25)
 	self.Comment:SetWide(230)
-	self.Comment:SetTextColor(Color(255,255,255))
 	self.Route:SetPos(10,5)
 	self.Route:SetWide(110)
 	self.Route:SetTextColor(Color(255,255,255))
 	self.FTime:SetTextColor(Color(255,255,255))
 	self.FTime:SetWide(130)
-	
+	self.FTime:SetPos(120,5)
 end
 
 function SchedPanel:AddRow(nm,tm,hl,sp)
@@ -101,23 +101,25 @@ function SchedPanel:AddRow(nm,tm,hl,sp)
 end
 
 function SchedPanel:Update(sched,ftime,btime,holds,comm)
-	local ftime_y = 5
 	local scrolls_y = 35
 	self.Comment:SetVisible(false)
+	height = 35
 	if comm ~= "" then
 		self.Comment:SetVisible(true)
+		self.Comment:SetPos(10,30)
 		self.Comment:SetText(comm)
-		ftime_y = 45
-		scrolls_y = 65
+		self.Comment:SetTextColor(Color(255,102,0))
+		scrolls_y = 50
+		height = 50
 	end
-	self.FTime:SetPos(120,ftime_y)
+	
 	self.FTime:SetText("Время хода: "..os.date("%M:%S",ftime))
 	self.Stations:Clear()
 	self.Stations:SetPos(10,scrolls_y)
 	self.Times:Clear()
 	self.Holds:Clear()
 	self.Holds:SetPos(220,scrolls_y)
-	height = 35
+	
 	local hl = false
 	for k,v in pairs(holds) do
 		if v > 0 then hl = true break end
