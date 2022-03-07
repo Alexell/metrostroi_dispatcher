@@ -386,7 +386,7 @@ function MDispatcher.GetSchedule(ply)
 		ply:ChatPrint("Карта не сконфигурирована!")
 		return
 	end
-	if #MDispatcher.Stations == 0 then
+	if table.Count(MDispatcher.Stations) == 0 then
 		ply:ChatPrint("Отсутствуют данные для создания расписания!")
 		return
 	end
@@ -429,7 +429,7 @@ end
 
 -- собираем нужную инфу по станциям
 local function BuildStationsTable()
-	if #Metrostroi.Paths == 0 then return end
+	if table.Count(Metrostroi.Paths) == 0 then return end
 	if not Metrostroi.StationConfigurations then return end
 	local distance = 600
 	local LineID 
@@ -441,15 +441,22 @@ local function BuildStationsTable()
 		if not IsValid(ent) then continue end
 		-- ищем номер линии (вдруг их две)
 		LineID = math.floor(ent.StationIndex/100)
-		
-		-- фикс для b50
+
+		-- ищем путь
+		Path = ent.PlatformIndex
+
+		-- пропуск лишнего
 		if game.GetMap():find("metrostroi_b50") then
 			if LineID > 1 then continue end
 		end
+		if game.GetMap():find("jar_pll_remastered") then
+			if Path > 2 then continue end
+		end
+		if game.GetMap():find("neoorange_e") then
+			if Path > 2 then continue end
+		end
 		
 		if MDispatcher.Stations[LineID] == nil then MDispatcher.Stations[LineID] = {} end
-		-- ищем путь
-		Path = ent.PlatformIndex
 		-- проверяем и записываем данные о станции
 		if MDispatcher.Stations[LineID][Path] == nil then MDispatcher.Stations[LineID][Path] = {} end
 		StationID = ent.StationIndex
@@ -457,7 +464,7 @@ local function BuildStationsTable()
 		if not MDispatcher.Stations[LineID][Path][StationID].Name then
 			MDispatcher.Stations[LineID][Path][StationID].Name = MDispatcher.StationNameByIndex(ent.StationIndex)
 			StationNode = Metrostroi.GetPositionOnTrack(LerpVector(0.5, ent.PlatformStart, ent.PlatformEnd))
-			StationNode = StationNode[1] and StationNode[1].node1 or {}
+			StationNode = StationNode[1] and table.Copy(StationNode[1].node1) or {}
 			MDispatcher.Stations[LineID][Path][StationID].Node = StationNode
 			MDispatcher.Stations[LineID][Path][StationID].NodeID = StationNode.id or -1
 			
@@ -466,7 +473,9 @@ local function BuildStationsTable()
 				if LineID == 2 and Path == 1 and StationID == 257 then
 					if MDispatcher.Stations[LineID][Path+1] == nil then MDispatcher.Stations[LineID][Path+1] = {} end
 					if MDispatcher.Stations[LineID][Path+1][StationID] == nil then
-						MDispatcher.Stations[LineID][Path+1][StationID] = MDispatcher.Stations[LineID][Path][StationID]
+						MDispatcher.Stations[LineID][Path+1][StationID] = table.Copy(MDispatcher.Stations[LineID][Path][StationID])
+						MDispatcher.Stations[LineID][Path+1][StationID].NodeID = 200
+						MDispatcher.Stations[LineID][Path+1][StationID].Node.id = 200
 					end
 				end
 				if LineID == 1 and Path == 1 and StationID == 155 then
@@ -511,7 +520,7 @@ end
 
 -- генерируем расписание
 function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
-	if #MDispatcher.Stations == 0 then return end
+	if table.Count(MDispatcher.Stations) == 0 then return end
 	local line_id = math.floor(station_start/100)
 	local init_node = MDispatcher.Stations[line_id][path][station_start].Node
 	local prev_node
@@ -552,6 +561,8 @@ end
 -- Дебаг в консоль сервера
 local function PrintDebugInfo()
 	if debug_enabled:GetInt() == 0 then return end
+	if table.Count(MDispatcher.Stations) == 0 then return end
+	if not Metrostroi.StationConfigurations then return end
 	print("")
 	print("===== MDispatcher Debug START =====")
 	print("")
