@@ -429,6 +429,7 @@ end
 
 -- собираем нужную инфу по станциям
 local function BuildStationsTable()
+	if game.GetMap():find("loopline_e") then return end
 	if table.Count(Metrostroi.Paths) == 0 then return end
 	if not Metrostroi.StationConfigurations then return end
 	local distance = 600
@@ -485,6 +486,18 @@ local function BuildStationsTable()
 				if LineID == 1 and Path == 1 and StationID == 156 then
 					MDispatcher.Stations[LineID][Path][StationID].NodeID = 800
 					MDispatcher.Stations[LineID][Path][StationID].Node.id = 800
+				end
+			end
+			
+			-- фикс для Рурал
+			if game.GetMap():find("ruralline_v29") then
+				if LineID == 1 and Path == 2 and StationID == 157 then
+					if MDispatcher.Stations[LineID][Path-1] == nil then MDispatcher.Stations[LineID][Path-1] = {} end
+					if MDispatcher.Stations[LineID][Path-1][StationID] == nil then
+						MDispatcher.Stations[LineID][Path-1][StationID] = table.Copy(MDispatcher.Stations[LineID][Path][StationID])
+						MDispatcher.Stations[LineID][Path-1][StationID].NodeID = 450
+						MDispatcher.Stations[LineID][Path-1][StationID].Node.id = 450
+					end
 				end
 			end
 		end
@@ -631,6 +644,23 @@ local function PLLFix()
 	StationConfig = nil
 end
 
+local function CrosslineFix()
+	for _, ent in pairs(ents.FindByClass("gmod_track_platform")) do
+		if not IsValid(ent) then continue end
+		if ent.StationIndex == 112 then
+			if ent.PlatformIndex == 2 then
+					ent.PlatformIndex = 3
+					ent:SetNWInt("PlatformIndex",ent.PlatformIndex)
+					ent:SetPos(Vector(-22.049999,-14800,-13601.968750))
+			end
+			if ent.PlatformIndex == 4 then
+				ent.PlatformIndex = 2
+				ent:SetNWInt("PlatformIndex",ent.PlatformIndex)
+			end
+		end
+	end
+end
+
 local function CrosslineReduxFix()
 	for _, ent in pairs(ents.FindByClass("gmod_track_platform")) do
 		if not IsValid(ent) then continue end
@@ -663,9 +693,12 @@ local function NVLFix()
 	StationConfig = nil
 end
 
-if game.GetMap():find("jar_pll_remastered") then timer.Simple(0.1,PLLFix) end
-if game.GetMap():find("crossline_r199h") then timer.Simple(0.1,CrosslineReduxFix) end
-if game.GetMap():find("metronvl") then timer.Simple(0.1,NVLFix) end
+hook.Add("Initialize", "MDispatcher_MapInitialize", function()
+	if game.GetMap():find("jar_pll_remastered") then timer.Simple(1,PLLFix) end
+	if game.GetMap():find("crossline_n") then timer.Simple(1,CrosslineFix) end
+	if game.GetMap():find("crossline_r199h") then timer.Simple(1,CrosslineReduxFix) end
+	if game.GetMap():find("metronvl") then timer.Simple(1,NVLFix) end
+end)
 
 -- запуск сбора данных
 timer.Simple(10,BuildStationsTable)
