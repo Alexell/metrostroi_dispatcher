@@ -465,7 +465,7 @@ local function BuildStationsTable()
 		if not MDispatcher.Stations[LineID][Path][StationID].Name then
 			MDispatcher.Stations[LineID][Path][StationID].Name = MDispatcher.StationNameByIndex(ent.StationIndex)
 			StationNode = Metrostroi.GetPositionOnTrack(LerpVector(0.5, ent.PlatformStart, ent.PlatformEnd))
-			StationNode = StationNode[1] and table.Copy(StationNode[1].node1) or {}
+			StationNode = StationNode[1] and StationNode[1].node1 or {}
 			MDispatcher.Stations[LineID][Path][StationID].Node = StationNode
 			MDispatcher.Stations[LineID][Path][StationID].NodeID = StationNode.id or -1
 			
@@ -475,17 +475,15 @@ local function BuildStationsTable()
 					if MDispatcher.Stations[LineID][Path+1] == nil then MDispatcher.Stations[LineID][Path+1] = {} end
 					if MDispatcher.Stations[LineID][Path+1][StationID] == nil then
 						MDispatcher.Stations[LineID][Path+1][StationID] = table.Copy(MDispatcher.Stations[LineID][Path][StationID])
+						MDispatcher.Stations[LineID][Path+1][StationID].Node = MDispatcher.Stations[LineID][Path][StationID].Node
 						MDispatcher.Stations[LineID][Path+1][StationID].NodeID = 200
-						MDispatcher.Stations[LineID][Path+1][StationID].Node.id = 200
 					end
 				end
 				if LineID == 1 and Path == 1 and StationID == 155 then
-					MDispatcher.Stations[LineID][Path][StationID].NodeID = 700
-					MDispatcher.Stations[LineID][Path][StationID].Node.id = 700
+					MDispatcher.Stations[LineID][Path][StationID].NodeID = MDispatcher.Stations[LineID][Path][StationID].NodeID + 674
 				end
 				if LineID == 1 and Path == 1 and StationID == 156 then
-					MDispatcher.Stations[LineID][Path][StationID].NodeID = 800
-					MDispatcher.Stations[LineID][Path][StationID].Node.id = 800
+					MDispatcher.Stations[LineID][Path][StationID].NodeID = MDispatcher.Stations[LineID][Path][StationID].NodeID + 674
 				end
 			end
 			
@@ -495,8 +493,8 @@ local function BuildStationsTable()
 					if MDispatcher.Stations[LineID][Path-1] == nil then MDispatcher.Stations[LineID][Path-1] = {} end
 					if MDispatcher.Stations[LineID][Path-1][StationID] == nil then
 						MDispatcher.Stations[LineID][Path-1][StationID] = table.Copy(MDispatcher.Stations[LineID][Path][StationID])
+						MDispatcher.Stations[LineID][Path-1][StationID].Node = MDispatcher.Stations[LineID][Path][StationID].Node
 						MDispatcher.Stations[LineID][Path-1][StationID].NodeID = 450
-						MDispatcher.Stations[LineID][Path-1][StationID].Node.id = 450
 					end
 				end
 			end
@@ -516,9 +514,8 @@ end
 
 -- получаем ко-во секунд в текущих сутках
 local function ConvertTime()
-	local tbl = os.date("!*t",Metrostroi.GetSyncTime())
+	local tbl = os.date("!*t")
 	local converted_time = tbl.hour*3600 + tbl.min*60 + tbl.sec
-	--print(os.date("%X", converted_time))
 	return converted_time
 end
 
@@ -535,9 +532,9 @@ end
 function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 	if table.Count(MDispatcher.Stations) == 0 then return end
 	local line_id = math.floor(station_start/100)
-	local init_node = MDispatcher.Stations[line_id][path][station_start].Node
+	local init_node_id = MDispatcher.Stations[line_id][path][station_start].NodeID
 	local prev_node
-	local last_node = station_last and MDispatcher.Stations[line_id][path][station_last].Node or MDispatcher.Stations[line_id][path][GetLastStationID(line_id,path)].Node
+	local last_node_id = station_last and MDispatcher.Stations[line_id][path][station_last].NodeID or MDispatcher.Stations[line_id][path][GetLastStationID(line_id,path)].NodeID
 	local sched_massiv = {}
 	local station_time = 40
 	local init_time = ConvertTime() + (station_time/2)
@@ -547,17 +544,17 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 	local back_time
 	
 	for k, v in SortedPairsByMemberValue(MDispatcher.Stations[line_id][path], "NodeID") do
-		if v.NodeID < init_node.id then continue end
-		if v.NodeID == init_node.id then
+		if v.NodeID < init_node_id then continue end
+		if v.NodeID == init_node_id then
 			travel_time = 0
 			full_time = travel_time
 		end
-		if v.NodeID > init_node.id and v.NodeID < last_node.id then
+		if v.NodeID > init_node_id and v.NodeID < last_node_id then
 			if holds and holds[k] then hold_time = holds[k] else hold_time = 0 end
 			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + station_time + hold_time
 			full_time = full_time + travel_time
 		end
-		if v.NodeID == last_node.id then
+		if v.NodeID == last_node_id then
 			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + (station_time/2)
 			full_time = full_time + travel_time
 			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",MDispatcher.RoundSeconds(init_time + full_time))})
@@ -620,9 +617,9 @@ local function PLLFix()
 		-- фикс координат на 158/2
 		if ent.StationIndex == 158 and ent.PlatformIndex == 2 then
 			ent:SetPos(ent:GetPos()+Vector(0,-100,0))
-			ent.PlatformStart = Vector(28.43,14169.9,-6721.3)
+			ent.PlatformStart = Vector(28.43,14169.9,-6786.97)
 			ent:SetNW2Vector("PlatformStart",ent.PlatformStart)
-			ent.PlatformEnd = Vector(4955.4,14174.3,-6722.9)
+			ent.PlatformEnd = Vector(4955.4,14174.3,-6786.97)
 			ent:SetNW2Vector("PlatformEnd",ent.PlatformEnd)
 		end
 		

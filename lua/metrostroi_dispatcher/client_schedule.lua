@@ -142,7 +142,7 @@ function SchedPanel:Update(sched,ftime,btime,holds,comm)
 	self.Stations:SetSize(hl and 150 or 182,height)
 	self.Times:SetSize(50,height)
 	self.Holds:SetSize(hl and 30 or 0,hl and height or 0)
-	ClearScheduleTimer(ftime+60)
+	ClearScheduleTimer(ftime+120)
 end
 vgui.Register("MDispatcher.SchedulePanel",SchedPanel,"Panel")
 
