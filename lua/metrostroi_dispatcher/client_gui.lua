@@ -181,10 +181,10 @@ local function SchedulePreiewForm(ply_tbl,stations,path,start,last)
 	lbfoot:SizeToContents()
 	
 	ht = ht + 20
-	local comm = vgui.Create("DTextEntry",pan) -- TODO
+	local comm = vgui.Create("DTextEntry",pan)
 	comm:SetPos(5,ht)
 	comm:SetSize(256,25)
-	comm:SetPlaceholderText("TODO")
+	comm:SetPlaceholderText("До ст. Новогиреево под оборот")
 	comm.AllowInput = function()
 		if utf8.len(comm:GetText()) == 30 then
 			return true
