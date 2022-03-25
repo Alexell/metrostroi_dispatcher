@@ -21,7 +21,14 @@ local undisp = ulx.command(CATEGORY_NAME,"ulx undisp",ulx.undisp,"!undisp")
 undisp:defaultAccess(ULib.ACCESS_ADMIN)
 undisp:help("Освободить пост ДЦХ.")
 
+local wait = 30
+local last = -wait
 function ulx.getsched(calling_ply)
+    if last + wait > CurTime() then
+		calling_ply:ChatPrint("Пожалуйста, подождите еще "..math.Round(last + wait - CurTime()).." секунд(ы), перед запросом расписания!")
+        return
+    end
+    last = CurTime()
 	MDispatcher.GetSchedule(calling_ply)
 end
 local getsched = ulx.command(CATEGORY_NAME,"ulx getsched",ulx.getsched,"!sget")
