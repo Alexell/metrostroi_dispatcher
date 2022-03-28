@@ -63,21 +63,21 @@ net.Receive("MDispatcher.InitialData",function()
 	MDispatcher.Interval = net.ReadString()
 	local ln2 = net.ReadUInt(32)
 	MDispatcher.DSCPPlayers = util.JSONToTable(util.Decompress(net.ReadData(ln2)))
-	if MDispatcher.DPanel then
+	if IsValid(MDispatcher.DPanel) then
 		MDispatcher.DPanel:Remove()
 		MDispatcher.DPanel = nil
 	end
 	MDispatcher.DPanel = vgui.Create("MDispatcher.DispPanel")
 	DPanelSetData()
 	
-	if MDispatcher.SPanel then
+	if IsValid(MDispatcher.SPanel) then
 		MDispatcher.SPanel:Remove()
 		MDispatcher.SPanel = nil
 	end
 	MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
 	MDispatcher.SPanel:SetVisible(false)
 
-	if MDispatcher.DSCPPanel then
+	if IsValid(MDispatcher.DSCPPanel) then
 		MDispatcher.DSCPPanel:Remove()
 		MDispatcher.DSCPPanel = nil
 	end

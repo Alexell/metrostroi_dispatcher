@@ -25,8 +25,8 @@ function MDispatcher.Initialize()
 	-- загрузка блок-постов
 	if not file.Exists("mdispatcher_controlrooms.txt","DATA") then
 		file.Write("mdispatcher_controlrooms.txt",MDispatcher.DefControlRooms)
-		MDispatcher.DefControlRooms = nil
 	end
+	MDispatcher.DefControlRooms = nil
 	
 	local fl = file.Read("mdispatcher_controlrooms.txt","DATA")
 	local tab = fl and util.JSONToTable(fl) or {}
@@ -423,6 +423,7 @@ function MDispatcher.GetSchedule(ply)
 end
 
 function MDispatcher.ClearSchedule(ply)
+	if not IsValid(ply) then return end
 	net.Start("MDispatcher.ClearSchedule")
 	net.Send(ply)
 end

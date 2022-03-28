@@ -11,8 +11,10 @@ local height = 50
 local function ClearScheduleTimer(ntime)
 	timer.Remove("MDispatcher.ClearSchedule")
 	timer.Create("MDispatcher.ClearSchedule",ntime,1,function()
-		MDispatcher.SPanel:Remove()
-		MDispatcher.SPanel = nil
+		if IsValid(MDispatcher.SPanel) then
+			MDispatcher.SPanel:Remove()
+			MDispatcher.SPanel = nil
+		end
 		height = 50
 		timer.Simple(1,function()
 			MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
@@ -153,6 +155,7 @@ net.Receive("MDispatcher.ScheduleData",function()
 	local bt = net.ReadString()
 	local hl = net.ReadTable()
 	local cm = net.ReadString()
+	if not IsValid(MDispatcher.SPanel) then return end
 	MDispatcher.SPanel:Update(tbl,ft,bt,hl,cm)
 end)
 

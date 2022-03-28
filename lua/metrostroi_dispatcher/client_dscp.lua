@@ -86,5 +86,6 @@ vgui.Register("MDispatcher.DSCPPanel",DSCPPanel,"Panel")
 net.Receive("MDispatcher.DSCPData",function()
 	local ln = net.ReadUInt(32)
 	local tbl = util.JSONToTable(util.Decompress(net.ReadData(ln)))
+	if not IsValid(MDispatcher.DSCPPanel) then return end
 	MDispatcher.DSCPPanel:Update(tbl)
 end)
