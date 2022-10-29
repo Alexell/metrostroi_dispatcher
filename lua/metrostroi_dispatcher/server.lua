@@ -608,6 +608,12 @@ local function ConvertTime()
 	return converted_time
 end
 
+-- получить интервал движения в секундах
+local function GetIntervalSec()
+	local int = MDispatcher.Interval:Split(".")
+	return (tonumber(int[1])*60) + tonumber(int[2])
+end
+
 -- получаем ID последней станции в порядке следования
 local function GetLastStationID(line_id,path)
 	local i = 0
@@ -622,11 +628,15 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 	if table.Count(MDispatcher.Stations) == 0 then return end
 	local line_id = math.floor(station_start/100)
 	local init_node_id = MDispatcher.Stations[line_id][path][station_start].NodeID
+	local init_clock = IsValid(MDispatcher.Stations[line_id][path][station_start].Clock) and MDispatcher.Stations[line_id][path][station_start].Clock
 	local prev_node
 	local last_node_id = station_last and MDispatcher.Stations[line_id][path][station_last].NodeID or MDispatcher.Stations[line_id][path][GetLastStationID(line_id,path)].NodeID
 	local sched_massiv = {}
 	local station_time = 40
 	local init_time = ConvertTime() + (station_time/2)
+	if init_clock != nil and GetIntervalTime(init_clock) > 0 and GetIntervalTime(init_clock) < GetIntervalSec() then
+		init_time = init_time + (GetIntervalSec() - GetIntervalTime(init_clock))
+	end
 	local travel_time
 	local hold_time
 	local full_time
