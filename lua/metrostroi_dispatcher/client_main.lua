@@ -95,7 +95,6 @@ net.Receive("MDispatcher.InitialData",function()
 	MDispatcher.IPanel:SetVisible(false)
 	MDispatcher.IPanel:SetStations()
 	MDispatcher.Intervals = {}
-	RunConsoleCommand("mdispatcher_intervals",0)
 end)
 
 net.Receive("MDispatcher.DispData",function()
@@ -153,19 +152,13 @@ timer.Create("MDispatcher.SetVisible",1,0,function()
 		else
 			MDispatcher.SPanel:SetVisible(false)
 		end
-		if GetConVar("mdispatcher_intervals"):GetBool() then
+		if not IsValid(LocalPlayer()) then return end
+		if LocalPlayer():GetNW2Bool("MDispatcher.ShowIntervals",false) then
 			if MDispatcher.SPanel:IsVisible() then
-				RunConsoleCommand("mdispatcher_spanel_state",1)
 				MDispatcher.SPanel:SetVisible(false)
-			else
-				RunConsoleCommand("mdispatcher_spanel_state",0)
 			end
 			MDispatcher.IPanel:SetVisible(true)
 		else
-			if GetConVar("mdispatcher_spanel_state"):GetBool() then
-				MDispatcher.SPanel:SetVisible(true)
-				RunConsoleCommand("mdispatcher_spanel_state",0)
-			end
 			MDispatcher.IPanel:SetVisible(false)
 		end
 	end

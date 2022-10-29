@@ -397,8 +397,16 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 			net.WriteString("sched-send-ok")
 		net.Send(ply)
 	elseif comm == "ints" then
-		local ints = MDispatcher.GetIntervals()
-		MDispatcher.SendIntervals(ply,ints)
+		local status = net.ReadBool()
+		if status then
+			ply:SetNW2Bool("MDispatcher.ShowIntervals",true)
+			local ints = MDispatcher.GetIntervals()
+			MDispatcher.SendIntervals(ply,ints)
+		else
+			ply:SetNW2Bool("MDispatcher.ShowIntervals",false)
+		end
+	elseif comm == "sched-auto" then
+		MDispatcher.GetSchedule(ply)
 	end
 end)
 
@@ -589,7 +597,7 @@ end
 timer.Create("MDispatcher.Intervals", 5, 0, function()
 	local need_plys = {}
 	for k,v in ipairs(player.GetAll()) do
-		if v:GetInfoNum("mdispatcher_intervals", 0) == 1 then
+		if v:GetNW2Bool("MDispatcher.ShowIntervals",false) then
 			table.insert(need_plys,v)
 		end
 	end
@@ -662,7 +670,7 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 		table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",MDispatcher.RoundSeconds(init_time + full_time))})
 		prev_node = v.Node
 	end
-	back_time = os.date("%X", MDispatcher.RoundSeconds(init_time + full_time + 120))
+	back_time = os.date("%X", MDispatcher.RoundSeconds(init_time + full_time + 240))
 	full_time = MDispatcher.RoundSeconds(full_time)
 	return sched_massiv, full_time, back_time, holds and holds or {}
 end

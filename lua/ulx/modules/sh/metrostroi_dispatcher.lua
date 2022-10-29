@@ -41,3 +41,16 @@ end
 local clearsched = ulx.command(CATEGORY_NAME,"ulx clearsched",ulx.clearsched,"!sclear")
 clearsched:defaultAccess(ULib.ACCESS_ALL)
 clearsched:help("Очистить расписание")
+
+function ulx.autosched(calling_ply)
+	if calling_ply:GetInfoNum("mdispatcher_autochedule", 0) == 1 then
+		calling_ply:ConCommand("mdispatcher_autochedule 0")
+		calling_ply:ChatPrint("Автоматическая перевыдача расписания после оборота выключена")
+	else
+		calling_ply:ConCommand("mdispatcher_autochedule 1")
+		calling_ply:ChatPrint("Автоматическая перевыдача расписания после оборота включена")
+	end
+end
+local autosched = ulx.command(CATEGORY_NAME,"ulx autosched",ulx.autosched,"!sauto")
+autosched:defaultAccess(ULib.ACCESS_ALL)
+autosched:help("Вкл/выкл авто-перевыдачу раписания")

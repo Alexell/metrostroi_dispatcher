@@ -86,7 +86,8 @@ function IntervalsPanel:AddInterval(station,int_p1,int_p2)
 end
 
 function IntervalsPanel:UpdateIntervals()
-	if not GetConVar("mdispatcher_intervals"):GetBool() then return end
+	if not IsValid(LocalPlayer()) then return end
+	if not LocalPlayer():GetNW2Bool("MDispatcher.ShowIntervals",false) then return end
 	if table.Count(MDispatcher.Intervals) == 0 then return end
 	for k,v in pairs(MDispatcher.Intervals) do
 		local p1,p2

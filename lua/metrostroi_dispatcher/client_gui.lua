@@ -345,13 +345,17 @@ local function DispatcherMenu(routes,stations)
 	showints:SetSize(170,25)
 	showints:SetText("Показать/скрыть")
 	showints.DoClick = function()
-		if GetConVar("mdispatcher_intervals"):GetBool() then
-			RunConsoleCommand("mdispatcher_intervals",0)
+		if not IsValid(LocalPlayer()) then return end
+		if LocalPlayer():GetNW2Bool("MDispatcher.ShowIntervals") then
+			net.Start("MDispatcher.Commands")
+				net.WriteString("ints")
+				net.WriteBool(false)
+			net.SendToServer()
 		else
 			net.Start("MDispatcher.Commands")
 				net.WriteString("ints")
+				net.WriteBool(true)
 			net.SendToServer()
-			RunConsoleCommand("mdispatcher_intervals",1)
 		end
 	end
 

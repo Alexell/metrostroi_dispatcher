@@ -8,7 +8,7 @@
 local SchedPanel = {}
 local height = 50
 
-local function ClearScheduleTimer(ntime)
+local function AutoScheduleTimer(ntime,delete)
 	timer.Remove("MDispatcher.ClearSchedule")
 	timer.Create("MDispatcher.ClearSchedule",ntime,1,function()
 		if IsValid(MDispatcher.SPanel) then
@@ -16,8 +16,14 @@ local function ClearScheduleTimer(ntime)
 			MDispatcher.SPanel = nil
 		end
 		height = 50
-		timer.Simple(1,function()
+		timer.Simple(0.1,function()
 			MDispatcher.SPanel = vgui.Create("MDispatcher.SchedulePanel")
+			if delete then return end
+			if GetConVar("mdispatcher_autochedule"):GetBool() then
+				net.Start("MDispatcher.Commands")
+					net.WriteString("sched-auto")
+				net.SendToServer()
+			end
 		end)
 	end)
 end
@@ -144,7 +150,7 @@ function SchedPanel:Update(sched,ftime,btime,holds,comm)
 	self.Stations:SetSize(hl and 150 or 182,height)
 	self.Times:SetSize(50,height)
 	self.Holds:SetSize(hl and 30 or 0,hl and height or 0)
-	ClearScheduleTimer(ftime+120)
+	AutoScheduleTimer(ftime+240,false)
 end
 vgui.Register("MDispatcher.SchedulePanel",SchedPanel,"Panel")
 
@@ -160,5 +166,5 @@ net.Receive("MDispatcher.ScheduleData",function()
 end)
 
 net.Receive("MDispatcher.ClearSchedule",function()
-	ClearScheduleTimer(1)
+	AutoScheduleTimer(1,true)
 end)
