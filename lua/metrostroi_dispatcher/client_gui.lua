@@ -333,23 +333,32 @@ local function DispatcherMenu(routes,stations)
 		end
 	end
 	
-	------------------- временно ---------------------
-	local tmp_panel = vgui.Create("DPanel",disp_panel)
-	tmp_panel:SetPos(200,80)
-	tmp_panel:SetSize(170,70)
-	tmp_panel:SetBackgroundColor(Color(190,194,198,255))
-	local tmp_lbl = vgui.Create("DLabel",tmp_panel)
-	tmp_lbl:SetFont("MDispSmallTitle")
-	tmp_lbl:SetColor(Color(255,255,255))
-	tmp_lbl:SetText("Work in progress...")
-	tmp_lbl:SizeToContents()
-	tmp_lbl:SetPos((tmp_panel:GetWide()/2)-(tmp_lbl:GetWide()/2),tmp_panel:GetTall()-(tmp_panel:GetTall()/2)-(tmp_lbl:GetTall()/2))
+	local lbintstitle = vgui.Create("DLabel",disp_panel)
+	lbintstitle:SetPos(200,70)
+	lbintstitle:SetSize(170,25)
+	lbintstitle:SetFont("MDispSmallTitle")
+	lbintstitle:SetColor(Color(255,255,255))
+	lbintstitle:SetText("Интервалы на станциях:")
 	
+	local showints = vgui.Create("DButton",disp_panel)
+	showints:SetPos(200,95)
+	showints:SetSize(170,25)
+	showints:SetText("Показать/скрыть")
+	showints.DoClick = function()
+		if GetConVar("mdispatcher_intervals"):GetBool() then
+			RunConsoleCommand("mdispatcher_intervals",0)
+		else
+			net.Start("MDispatcher.Commands")
+				net.WriteString("ints")
+			net.SendToServer()
+			RunConsoleCommand("mdispatcher_intervals",1)
+		end
+	end
+
 	local hor_line = vgui.Create("DPanel",disp_panel)
 	hor_line:SetPos(5,160)
 	hor_line:SetSize(365,1)
 	hor_line:SetBackgroundColor(Color(255,255,255,255))
-	---------------------------------------------------
 	
 	local lbset = vgui.Create("DLabel",disp_panel)
 	lbset:SetPos(5,70)

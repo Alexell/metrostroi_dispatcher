@@ -84,6 +84,18 @@ net.Receive("MDispatcher.InitialData",function()
 	MDispatcher.DSCPPanel = vgui.Create("MDispatcher.DSCPPanel")
 	MDispatcher.DSCPPanel:SetControlRooms()
 	MDispatcher.DSCPPanel:Update(MDispatcher.DSCPPlayers)
+	
+	local ln3 = net.ReadUInt(32)
+	MDispatcher.Stations = util.JSONToTable(util.Decompress(net.ReadData(ln3)))
+	if IsValid(MDispatcher.IPanel) then
+		MDispatcher.IPanel:Remove()
+		MDispatcher.IPanel = nil
+	end
+	MDispatcher.IPanel = vgui.Create("MDispatcher.IntervalsPanel")
+	MDispatcher.IPanel:SetVisible(false)
+	MDispatcher.IPanel:SetStations()
+	MDispatcher.Intervals = {}
+	RunConsoleCommand("mdispatcher_intervals",0)
 end)
 
 net.Receive("MDispatcher.DispData",function()
@@ -120,12 +132,13 @@ end
 vgui.Register("MDispatcher.DispPanel",DispPanel,"Panel")
 
 timer.Create("MDispatcher.SetVisible",1,0,function()
-	if (not IsValid(MDispatcher.DPanel) or not IsValid(MDispatcher.SPanel) or not IsValid(MDispatcher.DSCPPanel) or not IsValid(LocalPlayer())) then return end
+	if (not IsValid(MDispatcher.DPanel) or not IsValid(MDispatcher.SPanel) or not IsValid(MDispatcher.DSCPPanel) or not IsValid(MDispatcher.IPanel) or not IsValid(LocalPlayer())) then return end
 
 	if (IsValid(LocalPlayer():GetActiveWeapon()) and LocalPlayer():GetActiveWeapon():GetClass() == "gmod_camera") then
 		MDispatcher.DPanel:SetVisible(false)
 		MDispatcher.SPanel:SetVisible(false)
 		MDispatcher.DSCPPanel:SetVisible(false)
+		MDispatcher.IPanel:SetVisible(false)
 	else
 		if GetConVar("disp_showpanel"):GetBool() then
 			MDispatcher.DPanel:SetVisible(true)
@@ -139,6 +152,21 @@ timer.Create("MDispatcher.SetVisible",1,0,function()
 			MDispatcher.SPanel:SetVisible(true)
 		else
 			MDispatcher.SPanel:SetVisible(false)
+		end
+		if GetConVar("mdispatcher_intervals"):GetBool() then
+			if MDispatcher.SPanel:IsVisible() then
+				RunConsoleCommand("mdispatcher_spanel_state",1)
+				MDispatcher.SPanel:SetVisible(false)
+			else
+				RunConsoleCommand("mdispatcher_spanel_state",0)
+			end
+			MDispatcher.IPanel:SetVisible(true)
+		else
+			if GetConVar("mdispatcher_spanel_state"):GetBool() then
+				MDispatcher.SPanel:SetVisible(true)
+				RunConsoleCommand("mdispatcher_spanel_state",0)
+			end
+			MDispatcher.IPanel:SetVisible(false)
 		end
 	end
 end)

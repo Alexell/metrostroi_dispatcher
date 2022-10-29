@@ -13,6 +13,7 @@ util.AddNetworkString("MDispatcher.ClearSchedule")
 util.AddNetworkString("MDispatcher.Commands")
 util.AddNetworkString("MDispatcher.InitialData")
 util.AddNetworkString("MDispatcher.DSCPData")
+util.AddNetworkString("MDispatcher.IntervalsData")
 
 MDispatcher.ActiveDispatcher = false
 MDispatcher.Dispatcher = "отсутствует"
@@ -60,12 +61,25 @@ hook.Add("PlayerInitialSpawn","MDispatcher.InitPlayer",function(ply) -- отпр
 	if not IsValid(ply) then return end
 	local crooms = {}
 	local dscp = {}
+	local stations = {}
 	for k,v in pairs(MDispatcher.ControlRooms) do
 		table.insert(crooms,v.Name)
 	end
 	for k,v in pairs(MDispatcher.DSCP) do
 		table.insert(dscp,v[2])
 	end
+	for a,b in pairs(MDispatcher.Stations) do
+		for c,d in pairs(b) do
+			if c == 1 then
+				for k,v in SortedPairsByMemberValue(d, "NodeID") do
+					table.insert(stations,{ID = k, Name = v.Name})
+				end
+				break
+			end
+		end
+		break
+	end
+
 	net.Start("MDispatcher.InitialData")
 		crooms = util.Compress(util.TableToJSON(crooms))
 		local ln = #crooms
@@ -78,6 +92,11 @@ hook.Add("PlayerInitialSpawn","MDispatcher.InitPlayer",function(ply) -- отпр
 		local ln2 = #dscp
 		net.WriteUInt(ln2,32)
 		net.WriteData(dscp,ln2)
+		
+		stations = util.Compress(util.TableToJSON(stations))
+		local ln3 = #stations
+		net.WriteUInt(ln3,32)
+		net.WriteData(stations,ln3)
 	net.Send(ply)
 end)
 
@@ -377,6 +396,9 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 		net.Start("MDispatcher.Commands")
 			net.WriteString("sched-send-ok")
 		net.Send(ply)
+	elseif comm == "ints" then
+		local ints = MDispatcher.GetIntervals()
+		MDispatcher.SendIntervals(ply,ints)
 	end
 end)
 
@@ -470,6 +492,23 @@ local function BuildStationsTable()
 			MDispatcher.Stations[LineID][Path][StationID].Node = StationNode
 			MDispatcher.Stations[LineID][Path][StationID].NodeID = StationNode.id or -1
 			
+			-- запускаем цикл поиска часов
+			for b, ent2 in pairs(ents.FindInBox(ent.PlatformEnd + Vector(-distance, -distance, -distance/3), ent.PlatformEnd + Vector(distance, distance, distance/3))) do
+				if not IsValid(ent2) then continue end
+				if ent2:GetClass():find("gmod_track_clock_interval") then
+					-- проверяем наличие больших часов и сохраняем энтити больших часов
+					if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then 
+						MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+					end
+				end
+				if ent2:GetClass():find("gmod_track_clock_small") then
+					-- проверяем наличие маленьких часов и сохраняем энтити маленьких часов
+					if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then 
+						MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+					end
+				end
+			end
+			
 			-- фикс для ПЛЛ
 			if game.GetMap():find("jar_pll_remastered") then
 				if LineID == 2 and Path == 1 and StationID == 257 then
@@ -512,6 +551,55 @@ local function BuildStationsTable()
 		end
 	end
 end
+
+-- Собираем интервалы
+local function GetIntervalTime(ent)
+	if not IsValid(ent) then return -1 end
+	return math.floor(Metrostroi.GetSyncTime() - (ent:GetIntervalResetTime() + GetGlobalFloat("MetrostroiTY")))
+end
+
+function MDispatcher.GetIntervals()
+	local Intervals = {}
+	for a,b in pairs(MDispatcher.Stations) do
+		for c,d in pairs(b) do
+			if c == 1 then
+				for k,v in SortedPairsByMemberValue(d, "NodeID") do
+					int_p1 = GetIntervalTime(v.Clock)
+					int_p2 = GetIntervalTime(MDispatcher.Stations[a][2][k].Clock)
+					Intervals[k] = {int_p1, int_p2}
+				end
+				break
+			end
+		end
+		break
+	end
+	return Intervals
+end
+
+function MDispatcher.SendIntervals(ply,ints)
+	if not IsValid(ply) then return end
+	net.Start("MDispatcher.IntervalsData")
+		local tab = util.Compress(util.TableToJSON(ints))
+		local ln = #tab
+		net.WriteUInt(ln,32)
+		net.WriteData(tab,ln)
+	net.Send(ply)
+end
+
+timer.Create("MDispatcher.Intervals", 5, 0, function()
+	local need_plys = {}
+	for k,v in ipairs(player.GetAll()) do
+		if v:GetInfoNum("mdispatcher_intervals", 0) == 1 then
+			table.insert(need_plys,v)
+		end
+	end
+	if table.Count(need_plys) > 0 then
+		local intervals = MDispatcher.GetIntervals()
+		for k,v in ipairs(need_plys) do
+			MDispatcher.SendIntervals(v,intervals)
+		end
+	end
+end)
 
 -- получаем ко-во секунд в текущих сутках
 local function ConvertTime()
@@ -586,7 +674,7 @@ local function PrintDebugInfo()
 		for c,d in pairs(b) do
 			print("Path: "..c)
 			for k,v in SortedPairsByMemberValue(d, "NodeID") do
-				print("ID: "..k.."| Name: "..v.Name.." | Node: "..v.NodeID--[[.." | Clock: "..(v.Clock or "Not Founded")]])
+				print("ID: "..k.."| Name: "..v.Name.." | Node: "..v.NodeID.." | Clock: "..(IsValid(v.Clock) and v.Clock:EntIndex() or "Not Founded"))
 			end
 			print("")
 		end

@@ -13,6 +13,7 @@ if SERVER then
 	AddCSLuaFile("metrostroi_dispatcher/client_dscp.lua")
 	AddCSLuaFile("metrostroi_dispatcher/client_schedule.lua")
 	AddCSLuaFile("metrostroi_dispatcher/client_gui.lua")
+	AddCSLuaFile("metrostroi_dispatcher/client_intervals.lua")
 	include("metrostroi_dispatcher/server.lua")
 	include("metrostroi_dispatcher/def_controlrooms.lua")
 else
@@ -20,6 +21,9 @@ else
 	include("metrostroi_dispatcher/client_dscp.lua")
 	include("metrostroi_dispatcher/client_schedule.lua")
 	include("metrostroi_dispatcher/client_gui.lua")
+	include("metrostroi_dispatcher/client_intervals.lua")
+	CreateClientConVar("mdispatcher_spanel_state",0,false,false)
+	CreateClientConVar("mdispatcher_intervals",0,true,true)
 end
 
 -- получить номер маршрута с поезда
