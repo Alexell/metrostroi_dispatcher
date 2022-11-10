@@ -1,6 +1,6 @@
 # Metrostroi Dispatcher
 
-**Версия: 3.2**
+**Версия: 3.3**
 
 **Разработчики:** [Alexell](https://steamcommunity.com/profiles/76561198210303223) и [Agent Smith](https://steamcommunity.com/profiles/76561197990364979)
 
