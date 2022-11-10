@@ -458,15 +458,22 @@ function MDispatcher.ClearSchedule(ply)
 	net.Send(ply)
 end
 
+local function EntWithinBoundsFromPos(pos, ent, dist)
+	local distSQR = dist * dist
+	return pos:DistToSqr(ent:GetPos()) < distSQR
+end 
+
 -- собираем нужную инфу по станциям
 local function BuildStationsTable()
 	if game.GetMap():find("loopline_e") then return end
 	if table.Count(Metrostroi.Paths) == 0 then return end
 	if not Metrostroi.StationConfigurations then return end
-	local distance = 600
+	local distance = 500
 	local LineID 
 	local Path
 	local StationID
+	local StationPos
+	local TrackPos
 	local StationNode
 
 	for a, ent in pairs(ents.FindByClass("gmod_track_platform")) do
@@ -495,26 +502,71 @@ local function BuildStationsTable()
 		if MDispatcher.Stations[LineID][Path][StationID] == nil then MDispatcher.Stations[LineID][Path][StationID] = {} end
 		if not MDispatcher.Stations[LineID][Path][StationID].Name then
 			MDispatcher.Stations[LineID][Path][StationID].Name = MDispatcher.StationNameByIndex(ent.StationIndex)
-			StationNode = Metrostroi.GetPositionOnTrack(LerpVector(0.5, ent.PlatformStart, ent.PlatformEnd))
-			StationNode = StationNode[1] and StationNode[1].node1 or {}
+			
+			StationPos = Metrostroi.GetPositionOnTrack(ent.PlatformEnd)
+			if game.GetMap():find("neocrimson_line_a") then
+				if LineID == 5 and Path == 2 and StationID == 551 then
+					StationPos = Metrostroi.GetPositionOnTrack(ent.PlatformStart)
+				end
+			end
+			if game.GetMap():find("surfacemetro_w") then
+				if LineID == 1 and Path == 1 and StationID == 105 then
+					StationPos = Metrostroi.GetPositionOnTrack(ent.PlatformStart)
+				end
+			end
+			if game.GetMap():find("jar_imagine_line") then
+				if LineID == 7 and StationID == 700 then
+					StationPos = Metrostroi.GetPositionOnTrack(ent.PlatformStart)
+				end
+			end
+			StationNode = StationPos[1] and StationPos[1].node1 or {}
+			TrackPos = StationPos[1] and StationPos[1].node1.pos
 			MDispatcher.Stations[LineID][Path][StationID].Node = StationNode
 			MDispatcher.Stations[LineID][Path][StationID].NodeID = StationNode.id or -1
 			
-			-- запускаем цикл поиска часов
-			for b, ent2 in pairs(ents.FindInBox(ent.PlatformEnd + Vector(-distance, -distance, -distance/3), ent.PlatformEnd + Vector(distance, distance, distance/3))) do
-				if not IsValid(ent2) then continue end
-				if ent2:GetClass():find("gmod_track_clock_interval") then
-					-- проверяем наличие больших часов и сохраняем энтити больших часов
-					if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then 
-						MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+			-- запускаем цикл поиска часов			
+			if game.GetMap():find("minsk_1984") then -- костыль для Минска
+				distance = 750
+				for b, ent2 in pairs(ents.FindByClass("gmod_track_clock_interval_minsk")) do
+					if IsValid(ent2) and EntWithinBoundsFromPos(TrackPos, ent2, distance) then
+						if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then
+							MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+						end
 					end
 				end
-				if ent2:GetClass():find("gmod_track_clock_small") then
-					-- проверяем наличие маленьких часов и сохраняем энтити маленьких часов
-					if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then 
-						MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+			else
+			-- для всех остальных карт двойной обход
+                for b, ent2 in pairs(ents.FindByClass("gmod_track_clock_small")) do
+                    if IsValid(ent2) and EntWithinBoundsFromPos(TrackPos, ent2, distance) then
+                        if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then
+                            MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+                        end
+                    end
+                end
+				distance = 750
+				if game.GetMap():find("jar_pll_remastered") then 
+					if LineID == 1 and StationID == 150 then
+						distance = 500 
 					end
 				end
+				if game.GetMap():find("neocrimson_line_a") then 
+					if LineID == 5 and StationID == 551 then
+						distance = 500 
+					end
+				end 
+				if game.GetMap():find("jar_imagine_line") then
+					if LineID == 7 and StationID == 700 then
+						distance = 300
+					end
+				end
+				if game.GetMap():find("surfacemetro_w") then distance = 1000 end
+                for b, ent2 in pairs(ents.FindByClass("gmod_track_clock_interval")) do
+                    if IsValid(ent2) and EntWithinBoundsFromPos(TrackPos, ent2, distance) then
+                        if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then
+                            MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+                        end
+                    end
+                end
 			end
 			
 			-- фикс для ПЛЛ
@@ -548,7 +600,7 @@ local function BuildStationsTable()
 			end
 		end
 	end
-	
+
 	-- версия таблицы для клиента без нод
 	MDispatcher.ClientStations = table.Copy(MDispatcher.Stations)
 	for c,d in pairs(MDispatcher.ClientStations) do
