@@ -663,7 +663,7 @@ end)
 
 -- получаем ко-во секунд в текущих сутках
 local function ConvertTime()
-	local tbl = os.date("!*t")
+	local tbl = os.date("!*t", Metrostroi.GetSyncTime())
 	local converted_time = tbl.hour*3600 + tbl.min*60 + tbl.sec
 	return converted_time
 end
@@ -716,13 +716,13 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 		if v.NodeID == last_node_id then
 			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + (station_time/2)
 			full_time = full_time + travel_time
-			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",MDispatcher.RoundSeconds(init_time + full_time))})
+			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("!%X",MDispatcher.RoundSeconds(init_time + full_time))})
 			break
 		end
-		table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("%X",MDispatcher.RoundSeconds(init_time + full_time))})
+		table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("!%X",MDispatcher.RoundSeconds(init_time + full_time))})
 		prev_node = v.Node
 	end
-	back_time = os.date("%X", MDispatcher.RoundSeconds(init_time + full_time + 240))
+	back_time = os.date("!%X", MDispatcher.RoundSeconds(init_time + full_time + 240))
 	full_time = MDispatcher.RoundSeconds(full_time)
 	return sched_massiv, full_time, back_time, holds and holds or {}
 end
