@@ -811,7 +811,7 @@ function MDispatcher.GenerateSimpleSched(station_start,path,back_time, station_l
 	local last_node_id = station_last and MDispatcher.Stations[line_id][path][station_last].NodeID or MDispatcher.Stations[line_id][path][GetLastStationID(line_id,path)].NodeID
 	local sched_massiv = {}
 	local station_time = 40
-	ocal init_time = back_time and back_time - 10 or ConvertTime() + (station_time/2)
+	local init_time = back_time and back_time - 10 or ConvertTime() + (station_time/2)
 	if init_clock != nil and GetIntervalTime(init_clock) > 0 and GetIntervalTime(init_clock) < GetIntervalSec() then
 		init_time = init_time + (GetIntervalSec() - GetIntervalTime(init_clock))
 	end
