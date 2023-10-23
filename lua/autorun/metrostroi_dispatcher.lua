@@ -22,7 +22,7 @@ else
 	include("metrostroi_dispatcher/client_schedule.lua")
 	include("metrostroi_dispatcher/client_gui.lua")
 	include("metrostroi_dispatcher/client_intervals.lua")
-	CreateClientConVar("mdispatcher_autochedule",0,true,true)
+	CreateClientConVar("mdispatcher_autochedule",1,true,true)
 end
 
 -- получить номер маршрута с поезда

@@ -206,9 +206,10 @@ function MDispatcher.DispatcherMenu(ply)
 	for train in pairs(Metrostroi.SpawnedTrains) do
 		if not IsValid(train) then continue end
 		if (train.FrontTrain and train.RearTrain) then continue end
-		local driver = train.Owner
+		local owner = train.Owner
+		if not IsValid(owner) then continue end
 		local route = MDispatcher.GetRouteNumber(train)
-		if not routes[driver:SteamID()] then routes[driver:SteamID()] = {Nick = driver:Nick(), Route = route} end
+		if not routes[owner:SteamID()] then routes[owner:SteamID()] = {Nick = owner:Nick(), Route = route} end
 	end
 	net.Start("MDispatcher.Commands")
 		net.WriteString("menu")
@@ -339,6 +340,10 @@ local function SaveControlRooms(ply,tab)
 	end)
 end
 
+local function GetRearTrain(train)
+	return train.WagonList[#train.WagonList]
+end
+
 net.Receive("MDispatcher.Commands",function(ln,ply)
 	if not IsValid(ply) then return end
 	local comm = net.ReadString()
@@ -382,16 +387,20 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 		local hl = net.ReadTable()
 		local cm = net.ReadString()
 		local tar = player.GetBySteamID(sid)
+		local train = tar:GetTrain()
+		if not IsValid(train) then
+			ply:ChatPrint("Поезд игрока не обнаружен!\nОтправить расписание можно только игроку в кресле машиниста.")
+			return
+		end
 		local sched,ftime,btime,holds = MDispatcher.GenerateSimpleSched(start,path,last,hl)
+		local schedule = {table = sched, ftime = ftime, btime = btime, holds = holds, comm = cm}
+		train.ScheduleData = schedule
+		GetRearTrain(train).ScheduleData = schedule
 		net.Start("MDispatcher.ScheduleData")
-			local tbl = util.Compress(util.TableToJSON(sched))
+			local tbl = util.Compress(util.TableToJSON(schedule))
 			local ln = #tbl
 			net.WriteUInt(ln,32)
 			net.WriteData(tbl,ln)
-			net.WriteString(ftime)
-			net.WriteString(btime)
-			net.WriteTable(holds)
-			net.WriteString(cm)
 		net.Send(tar)
 		net.Start("MDispatcher.Commands")
 			net.WriteString("sched-send-ok")
@@ -405,10 +414,24 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 		else
 			ply:SetNW2Bool("MDispatcher.ShowIntervals",false)
 		end
-	elseif comm == "sched-auto" then
-		MDispatcher.GetSchedule(ply)
 	end
 end)
+
+-- получаем ID последней станции в порядке следования
+local function GetLastStationID(line_id,path)
+	local i = 0
+	for k,v in SortedPairsByMemberValue(MDispatcher.Stations[line_id][path],"NodeID") do
+		i = i + 1
+		if i == table.Count(MDispatcher.Stations[line_id][path]) then return k end
+	end
+end
+
+-- получаем ко-во секунд в текущих сутках
+local function ConvertTime()
+	local tbl = os.date("!*t", Metrostroi.GetSyncTime())
+	local converted_time = tbl.hour*3600 + tbl.min*60 + tbl.sec
+	return converted_time
+end
 
 function MDispatcher.GetSchedule(ply)
 	if not IsValid(ply) then return end
@@ -440,28 +463,139 @@ function MDispatcher.GetSchedule(ply)
 		return
 	end
 	local sched,ftime,btime,holds = MDispatcher.GenerateSimpleSched(station,path)
+	local schedule = {table = sched, ftime = ftime, btime = btime, holds = holds, comm = ""}
+	train.ScheduleData = schedule
+	GetRearTrain(train).ScheduleData = schedule
 	net.Start("MDispatcher.ScheduleData")
-		local tbl = util.Compress(util.TableToJSON(sched))
+		local tbl = util.Compress(util.TableToJSON(schedule))
 		local ln = #tbl
 		net.WriteUInt(ln,32)
 		net.WriteData(tbl,ln)
-		net.WriteString(ftime)
-		net.WriteString(btime)
-		net.WriteTable(holds)
-		net.WriteString("")
 	net.Send(ply)
 end
 
 function MDispatcher.ClearSchedule(ply)
 	if not IsValid(ply) then return end
+	local train = ply:GetTrain()
+	if not IsValid(train) then
+		ply:ChatPrint("Поезд не обнаружен!\nОчистить расписание можно только находясь в кресле машиниста.")
+		return
+	end
+	if ply ~= train.Owner then
+		ply:ChatPrint("Вы не можете очистить расписание чужого поезда.")
+		return
+	end
+	train.ScheduleData = nil
+	GetRearTrain(train).ScheduleData = nil
 	net.Start("MDispatcher.ClearSchedule")
 	net.Send(ply)
 end
 
+hook.Add("PlayerEnteredVehicle","MDispatcher.EnteredVehicle",function(ply,veh)
+    local train = veh:GetNW2Entity("TrainEntity")
+    if IsValid(train) then
+		if train.ScheduleData then
+			net.Start("MDispatcher.ScheduleData")
+				local tbl = util.Compress(util.TableToJSON(train.ScheduleData))
+				local ln = #tbl
+				net.WriteUInt(ln,32)
+				net.WriteData(tbl,ln)
+			net.Send(ply)
+		else
+			net.Start("MDispatcher.ClearSchedule")
+			net.Send(ply)
+		end
+    end
+end)
+
+local function UpdateTrainSchedule(train, station, arrived)
+	if not IsValid(train) then return end
+	local clear_schedule = false
+	local nxt = false
+	local last = false
+	local line_id = math.floor(station/100)
+	local path = train:ReadCell(49168)
+	local last_st = GetLastStationID(line_id,path)
+	if station == last_st then last = true end
+	if arrived and train.ScheduleData.NeedRegenerate then
+		local owner = train.Owner
+		if IsValid(owner) and owner:GetInfoNum("mdispatcher_autochedule", 1) == 1 then
+			local sched,ftime,btime,holds = MDispatcher.GenerateSimpleSched(station,path)
+			local schedule = {table = sched, ftime = ftime, btime = btime, holds = holds, comm = ""}
+			train.ScheduleData = schedule
+			GetRearTrain(train).ScheduleData = schedule
+		else
+			train.ScheduleData = nil
+			GetRearTrain(train).ScheduleData = nil
+			clear_schedule = true
+		end
+	end
+	if train.ScheduleData then
+		for k,v in pairs(train.ScheduleData.table) do
+			if arrived then
+				if v.ID == station then
+					local result = v.Time - 20 - ConvertTime()
+					if result > 0 then v.State = "cur" else v.State = "cur_late" end
+					break
+				end
+			else
+				if v.ID == station then
+					local driver = train:GetDriver()
+					if IsValid(driver) then
+						local result = math.abs(v.Time - ConvertTime())
+						hook.Run("MDispatcher.Departure", driver, result < 20)
+					end
+				end
+				if last then
+					if v.ID == station then
+						v.State = "prev"
+						train.ScheduleData.NeedRegenerate = true
+						break
+					end
+				else
+					if v.ID == station then v.State = "prev" nxt = true end
+					if v.ID ~= station and nxt then v.State = "next" break end
+				end
+			end
+		end
+	end
+	local seats = {train.DriverSeat, train.InstructorsSeat, train.ExtraSeat1, train.ExtraSeat2, train.ExtraSeat3}
+	for k,v in pairs(seats) do
+		if not IsValid(v) then continue end
+		local driver = v:GetDriver()
+		if not IsValid(driver) then continue end
+		if not clear_schedule then
+			net.Start("MDispatcher.ScheduleData")
+				local tbl = util.Compress(util.TableToJSON(train.ScheduleData))
+				local ln = #tbl
+				net.WriteUInt(ln,32)
+				net.WriteData(tbl,ln)
+			net.Send(driver)
+		else
+			MDispatcher.ClearSchedule(driver)
+		end
+	end
+end
+
+timer.Create("MDispatcher.Platforms",3,0,function()
+	for k, v in pairs(ents.FindByClass("gmod_track_platform")) do
+		if v.CurrentTrain and v.CurrentTrain.ScheduleData then
+			if (v.CurrentTrain.LeftDoorsOpen or v.CurrentTrain.RightDoorsOpen) and not v.CurrentTrainStopped then
+				v.CurrentTrainStopped = true
+				UpdateTrainSchedule(v.CurrentTrain, v.StationIndex, true)
+			end
+			if v.CurrentTrain.Speed > 5 and v.CurrentTrainStopped then
+				v.CurrentTrainStopped = false
+				UpdateTrainSchedule(v.CurrentTrain, v.StationIndex, false)
+			end
+		end
+	end
+end)
+
 local function EntWithinBoundsFromPos(pos, ent, dist)
 	local distSQR = dist * dist
 	return pos:DistToSqr(ent:GetPos()) < distSQR
-end 
+end
 
 -- собираем нужную инфу по станциям
 local function BuildStationsTable()
@@ -624,8 +758,8 @@ function MDispatcher.GetIntervals()
 		for c,d in pairs(b) do
 			if c == 1 then
 				for k,v in SortedPairsByMemberValue(d, "NodeID") do
-					int_p1 = GetIntervalTime(v.Clock)
-					int_p2 = GetIntervalTime(MDispatcher.Stations[a][2][k].Clock)
+					local int_p1 = GetIntervalTime(v.Clock)
+					local int_p2 = GetIntervalTime(MDispatcher.Stations[a][2][k].Clock)
 					Intervals[k] = {int_p1, int_p2}
 				end
 				break
@@ -661,26 +795,10 @@ timer.Create("MDispatcher.Intervals", 5, 0, function()
 	end
 end)
 
--- получаем ко-во секунд в текущих сутках
-local function ConvertTime()
-	local tbl = os.date("!*t", Metrostroi.GetSyncTime())
-	local converted_time = tbl.hour*3600 + tbl.min*60 + tbl.sec
-	return converted_time
-end
-
 -- получить интервал движения в секундах
 local function GetIntervalSec()
 	local int = MDispatcher.Interval:Split(".")
 	return (tonumber(int[1])*60) + tonumber(int[2])
-end
-
--- получаем ID последней станции в порядке следования
-local function GetLastStationID(line_id,path)
-	local i = 0
-	for k,v in SortedPairsByMemberValue(MDispatcher.Stations[line_id][path],"NodeID") do
-		i = i + 1
-		if i == table.Count(MDispatcher.Stations[line_id][path]) then return k end
-	end
 end
 
 -- генерируем расписание
@@ -707,6 +825,9 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 		if v.NodeID == init_node_id then
 			travel_time = 0
 			full_time = travel_time
+			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = MDispatcher.RoundSeconds(init_time + full_time), State = "cur"})
+			prev_node = v.Node
+			continue
 		end
 		if v.NodeID > init_node_id and v.NodeID < last_node_id then
 			if holds and holds[k] then hold_time = holds[k] else hold_time = 0 end
@@ -716,13 +837,13 @@ function MDispatcher.GenerateSimpleSched(station_start,path,station_last,holds)
 		if v.NodeID == last_node_id then
 			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + (station_time/2)
 			full_time = full_time + travel_time
-			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("!%X",MDispatcher.RoundSeconds(init_time + full_time))})
+			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = MDispatcher.RoundSeconds(init_time + full_time), State = ""})
 			break
 		end
-		table.insert(sched_massiv, {ID = k, Name = v.Name, Time = os.date("!%X",MDispatcher.RoundSeconds(init_time + full_time))})
+		table.insert(sched_massiv, {ID = k, Name = v.Name, Time = MDispatcher.RoundSeconds(init_time + full_time), State = ""})
 		prev_node = v.Node
 	end
-	back_time = os.date("!%X", MDispatcher.RoundSeconds(init_time + full_time + 240))
+	back_time = MDispatcher.RoundSeconds(init_time + full_time + 240)
 	full_time = MDispatcher.RoundSeconds(full_time)
 	return sched_massiv, full_time, back_time, holds and holds or {}
 end

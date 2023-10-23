@@ -130,6 +130,15 @@ function DispPanel:PerformLayout()
 end
 vgui.Register("MDispatcher.DispPanel",DispPanel,"Panel")
 
+local function PlayerInCabinSeat()
+	local seat = LocalPlayer():GetVehicle()
+	if IsValid(seat) then
+		local seattype = seat:GetNW2String("SeatType", "")
+		if seattype == "driver" or seattype == "instructor" then return true end
+	end
+	return false
+end
+
 timer.Create("MDispatcher.SetVisible",1,0,function()
 	if (not IsValid(MDispatcher.DPanel) or not IsValid(MDispatcher.SPanel) or not IsValid(MDispatcher.DSCPPanel) or not IsValid(MDispatcher.IPanel) or not IsValid(LocalPlayer())) then return end
 
@@ -146,7 +155,7 @@ timer.Create("MDispatcher.SetVisible",1,0,function()
 			MDispatcher.DPanel:SetVisible(false)
 			MDispatcher.DSCPPanel:SetVisible(false)
 		end
-		if IsValid(LocalPlayer().InMetrostroiTrain) then
+		if PlayerInCabinSeat() and IsValid(LocalPlayer().InMetrostroiTrain) then
 			MDispatcher.SPanel.Route:SetText("Маршрут: "..MDispatcher.GetRouteNumber(LocalPlayer().InMetrostroiTrain))
 			MDispatcher.SPanel:SetVisible(true)
 		else
