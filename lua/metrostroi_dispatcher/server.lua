@@ -599,7 +599,7 @@ timer.Create("MDispatcher.Platforms",3,0,function()
 				UpdateTrainSchedule(GetRearTrain(v.CurrentTrain), v.StationIndex, true)
 			end
 			if v.CurrentTrain.Speed > 5 and v.CurrentTrain.Stopped then
-				v.CurrentTrain.Stopped = nil
+				v.CurrentTrain.Stopped = false
 				UpdateTrainSchedule(v.CurrentTrain, v.StationIndex, false)
 				UpdateTrainSchedule(GetRearTrain(v.CurrentTrain), v.StationIndex, false)
 			end
