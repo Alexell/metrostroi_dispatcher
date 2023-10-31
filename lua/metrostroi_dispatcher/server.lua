@@ -515,11 +515,14 @@ local function UpdateTrainSchedule(train, station, arrived)
 	local last = false
 	local line_id = math.floor(station/100)
 	local path = train:ReadCell(49168)
-	local last_st = GetLastStationID(line_id,path)
+	local last_st = train.ScheduleData.table[#train.ScheduleData.table].ID
 	if station == last_st then last = true end
 	if arrived and train.ScheduleData.NeedRegenerate then
 		local owner = train.Owner
 		if IsValid(owner) and owner:GetInfoNum("mdispatcher_autochedule", 1) == 1 then
+			if game.GetMap():find("neocrimson_line_a") 	and station == 551 then path = 1 end
+			if game.GetMap():find("jar_pll_remastered") and station == 150 then path = 1 end
+			if game.GetMap():find("jar_imagine_line") 	and station == 700 then path = 1 end
 			local sched,ftime,btime,holds = MDispatcher.GenerateSimpleSched(station,path,train.ScheduleData.btime)
 			local schedule = {table = sched, ftime = ftime, btime = btime, holds = holds, comm = ""}
 			train.ScheduleData = schedule
@@ -534,8 +537,18 @@ local function UpdateTrainSchedule(train, station, arrived)
 		for k,v in pairs(train.ScheduleData.table) do
 			if arrived then
 				if v.ID == station then
-					local result = v.Time - 20 - ConvertTime()
-					if result > 0 then v.State = "cur" else v.State = "cur_late" end
+					local result = v.Time - ConvertTime()
+					if result > 20 then 
+						v.State = "cur"
+					else 
+						v.State = "cur_late"
+					end
+					if last and result < -45 then 
+						v.State = "prev"
+					end
+					if last and result < -120 then 
+						train.ScheduleData.NeedRegenerate = true
+					end
 					break
 				end
 			else
@@ -579,14 +592,16 @@ end
 
 timer.Create("MDispatcher.Platforms",3,0,function()
 	for k, v in pairs(ents.FindByClass("gmod_track_platform")) do
-		if v.CurrentTrain and v.CurrentTrain.ScheduleData then
-			if (v.CurrentTrain.LeftDoorsOpen or v.CurrentTrain.RightDoorsOpen) and not v.CurrentTrainStopped then
-				v.CurrentTrainStopped = true
+		if IsValid(v.CurrentTrain) and v.CurrentTrain.ScheduleData then
+			if v.CurrentTrain.LeftDoorsOpen or v.CurrentTrain.RightDoorsOpen then
+				v.CurrentTrain.Stopped = true
 				UpdateTrainSchedule(v.CurrentTrain, v.StationIndex, true)
+				UpdateTrainSchedule(GetRearTrain(v.CurrentTrain), v.StationIndex, true)
 			end
-			if v.CurrentTrain.Speed > 5 and v.CurrentTrainStopped then
-				v.CurrentTrainStopped = false
+			if v.CurrentTrain.Speed > 5 and v.CurrentTrain.Stopped then
+				v.CurrentTrain.Stopped = nil
 				UpdateTrainSchedule(v.CurrentTrain, v.StationIndex, false)
+				UpdateTrainSchedule(GetRearTrain(v.CurrentTrain), v.StationIndex, false)
 			end
 		end
 	end
@@ -811,9 +826,9 @@ function MDispatcher.GenerateSimpleSched(station_start,path,back_time, station_l
 	local last_node_id = station_last and MDispatcher.Stations[line_id][path][station_last].NodeID or MDispatcher.Stations[line_id][path][GetLastStationID(line_id,path)].NodeID
 	local sched_massiv = {}
 	local station_time = 40
-	local init_time = back_time and back_time - 10 or ConvertTime() + (station_time/2)
+	local init_time = back_time and back_time - 10 or MDispatcher.RoundSeconds(ConvertTime()) + (station_time/2)
 	if init_clock != nil and GetIntervalTime(init_clock) > 0 and GetIntervalTime(init_clock) < GetIntervalSec() then
-		init_time = init_time + (GetIntervalSec() - GetIntervalTime(init_clock))
+		init_time = init_time + MDispatcher.RoundSeconds((GetIntervalSec() - GetIntervalTime(init_clock)))
 	end
 	local travel_time
 	local hold_time
@@ -832,11 +847,11 @@ function MDispatcher.GenerateSimpleSched(station_start,path,back_time, station_l
 		if v.NodeID > init_node_id and v.NodeID < last_node_id then
 			if holds and holds[k] then hold_time = holds[k] else hold_time = 0 end
 			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + station_time + hold_time
-			full_time = full_time + travel_time
+			full_time = MDispatcher.RoundSeconds(full_time + travel_time)
 		end
 		if v.NodeID == last_node_id then
 			travel_time = Metrostroi.GetTravelTime(prev_node,v.Node) + (station_time/2)
-			full_time = full_time + travel_time
+			full_time = MDispatcher.RoundSeconds(full_time + travel_time)
 			table.insert(sched_massiv, {ID = k, Name = v.Name, Time = MDispatcher.RoundSeconds(init_time + full_time), State = ""})
 			break
 		end
@@ -844,7 +859,7 @@ function MDispatcher.GenerateSimpleSched(station_start,path,back_time, station_l
 		prev_node = v.Node
 	end
 	back_time = MDispatcher.RoundSeconds(init_time + full_time + 240)
-	full_time = MDispatcher.RoundSeconds(full_time)
+	full_time = MDispatcher.RoundSeconds(full_time - 10)
 	return sched_massiv, full_time, back_time, holds and holds or {}
 end
 
