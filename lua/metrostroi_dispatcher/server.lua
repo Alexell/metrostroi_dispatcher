@@ -463,15 +463,20 @@ function MDispatcher.GetSchedule(ply)
 		return
 	end
 	local sched,ftime,btime,holds = MDispatcher.GenerateSimpleSched(station,path)
-	local schedule = {table = sched, ftime = ftime, btime = btime, holds = holds, comm = ""}
-	train.ScheduleData = schedule
-	GetRearTrain(train).ScheduleData = schedule
-	net.Start("MDispatcher.ScheduleData")
-		local tbl = util.Compress(util.TableToJSON(schedule))
-		local ln = #tbl
-		net.WriteUInt(ln,32)
-		net.WriteData(tbl,ln)
-	net.Send(ply)
+	if table.Count(sched) > 2 then
+		local schedule = {table = sched, ftime = ftime, btime = btime, holds = holds, comm = ""}
+		train.ScheduleData = schedule
+		GetRearTrain(train).ScheduleData = schedule
+		net.Start("MDispatcher.ScheduleData")
+			local tbl = util.Compress(util.TableToJSON(schedule))
+			local ln = #tbl
+			net.WriteUInt(ln,32)
+			net.WriteData(tbl,ln)
+		net.Send(ply)
+	else
+		ply:ChatPrint("Недостаточно данных для создания расписания!")
+		return
+	end
 end
 
 function MDispatcher.ClearSchedule(ply)
@@ -510,6 +515,8 @@ end)
 
 local function UpdateTrainSchedule(train, station, arrived)
 	if not IsValid(train) then return end
+	local rear_train = GetRearTrain(train)
+	if not IsValid(rear_train) then return end
 	local clear_schedule = false
 	local nxt = false
 	local last = false
@@ -524,12 +531,14 @@ local function UpdateTrainSchedule(train, station, arrived)
 			if game.GetMap():find("jar_pll_remastered") and station == 150 then path = 1 end
 			if game.GetMap():find("jar_imagine_line") 	and station == 700 then path = 1 end
 			local sched,ftime,btime,holds = MDispatcher.GenerateSimpleSched(station,path,train.ScheduleData.btime)
-			local schedule = {table = sched, ftime = ftime, btime = btime, holds = holds, comm = ""}
-			train.ScheduleData = schedule
-			GetRearTrain(train).ScheduleData = schedule
+			if table.Count(sched) > 2 then
+				local schedule = {table = sched, ftime = ftime, btime = btime, holds = holds, comm = ""}
+				train.ScheduleData = schedule
+				rear_train.ScheduleData = schedule
+			end
 		else
 			train.ScheduleData = nil
-			GetRearTrain(train).ScheduleData = nil
+			rear_train.ScheduleData = nil
 			clear_schedule = true
 		end
 	end
@@ -572,7 +581,7 @@ local function UpdateTrainSchedule(train, station, arrived)
 			end
 		end
 	end
-	local seats = {train.DriverSeat, train.InstructorsSeat, train.ExtraSeat1, train.ExtraSeat2, train.ExtraSeat3}
+	local seats = {train.DriverSeat, train.InstructorsSeat, train.ExtraSeat1, train.ExtraSeat2, train.ExtraSeat3, rear_train.DriverSeat, rear_train.InstructorsSeat, rear_train.ExtraSeat1, rear_train.ExtraSeat2, rear_train.ExtraSeat3}
 	for k,v in pairs(seats) do
 		if not IsValid(v) then continue end
 		local driver = v:GetDriver()
@@ -596,12 +605,10 @@ timer.Create("MDispatcher.Platforms",3,0,function()
 			if v.CurrentTrain.LeftDoorsOpen or v.CurrentTrain.RightDoorsOpen then
 				v.CurrentTrain.Stopped = true
 				UpdateTrainSchedule(v.CurrentTrain, v.StationIndex, true)
-				UpdateTrainSchedule(GetRearTrain(v.CurrentTrain), v.StationIndex, true)
 			end
 			if v.CurrentTrain.Speed > 5 and v.CurrentTrain.Stopped then
 				v.CurrentTrain.Stopped = false
 				UpdateTrainSchedule(v.CurrentTrain, v.StationIndex, false)
-				UpdateTrainSchedule(GetRearTrain(v.CurrentTrain), v.StationIndex, false)
 			end
 		end
 	end
