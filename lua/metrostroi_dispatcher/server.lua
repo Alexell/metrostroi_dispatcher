@@ -552,6 +552,9 @@ local function UpdateTrainSchedule(train, station, arrived)
 					else 
 						v.State = "cur_late"
 					end
+					if (k > 1 and train.ScheduleData.table[k-1].State ~= "prev") then
+						train.ScheduleData.table[k-1].State = "prev"
+					end
 					if last and result < -45 then 
 						v.State = "prev"
 					end
@@ -565,7 +568,7 @@ local function UpdateTrainSchedule(train, station, arrived)
 					local driver = train:GetDriver()
 					if IsValid(driver) then
 						local result = math.abs(v.Time - ConvertTime())
-						hook.Run("MDispatcher.Departure", driver, result < 20)
+						hook.Run("MDispatcher.Departure", train, driver, result < 20)
 					end
 				end
 				if last then
