@@ -523,9 +523,6 @@ local function DispatcherMenu(routes,stations)
 					net.WriteString("cr-teleport")
 					net.WriteString(name)
 				net.SendToServer()
-				if game.GetMap():find("gm_metro_kalinin") and name == "Депо" then
-					timer.Simple(1,frame_create) -- функция из Калининской
-				end
 			end
 			cr_height = cr_height + 30
 			scroll_panel:SetSize(365,cr_height)
