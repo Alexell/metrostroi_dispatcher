@@ -745,18 +745,6 @@ local function BuildStationsTable()
 					MDispatcher.Stations[LineID][Path][StationID].NodeID = MDispatcher.Stations[LineID][Path][StationID].NodeID + 674
 				end
 			end
-			
-			-- фикс для Рурал
-			if game.GetMap():find("ruralline_v29") then
-				if LineID == 1 and Path == 2 and StationID == 157 then
-					if MDispatcher.Stations[LineID][Path-1] == nil then MDispatcher.Stations[LineID][Path-1] = {} end
-					if MDispatcher.Stations[LineID][Path-1][StationID] == nil then
-						MDispatcher.Stations[LineID][Path-1][StationID] = table.Copy(MDispatcher.Stations[LineID][Path][StationID])
-						MDispatcher.Stations[LineID][Path-1][StationID].Node = MDispatcher.Stations[LineID][Path][StationID].Node
-						MDispatcher.Stations[LineID][Path-1][StationID].NodeID = 450
-					end
-				end
-			end
 		end
 	end
 
