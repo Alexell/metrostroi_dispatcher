@@ -19,6 +19,7 @@ MDispatcher.ActiveDispatcher = false
 MDispatcher.Dispatcher = "отсутствует"
 MDispatcher.Interval = "2.00"
 MDispatcher.Stations = {}
+MDispatcher.Signals = {}
 MDispatcher.ClientStations = {}
 MDispatcher.ControlRooms = {}
 
@@ -39,10 +40,38 @@ function MDispatcher.Initialize()
 			table.insert(MDispatcher.DSCP,{v.Name,"отсутствует"})
 		end
 	end
+	
+	-- изменения в сигналах
+	local ENT = scripted_ents.GetStored("gmod_track_signal").t
+	local ars_logic = ENT.ARSLogic
+	function ENT:ARSLogic(tim)
+		ars_logic(self, tim)
+		if self.Routes[self.Route] then
+			if self.Routes[self.Route].ARSCodes then
+				local ARSCodes = self.Routes[self.Route].ARSCodes
+				if self.NextSignalLink == nil and not self.Occupied then
+					self.ARSSpeedLimit = self.InvationSignal and 1 or tonumber(ARSCodes[math.min(#ARSCodes, self.FreeBS+1)])
+				end
+			end
+		end
+	end
+	
+	-- загрузка сигналов, имеющих маршрут
+	for k, v in pairs(ents.FindByClass("gmod_track_signal")) do
+		local routes = {}
+		for id, info in pairs(v.Routes) do
+			if info.RouteName and info.RouteName != "" then
+				table.insert(routes, info.RouteName:upper())
+			end
+		end
+		if #routes > 0 then
+			table.insert(MDispatcher.Signals, {Name = v.Name, Routes = routes})
+		end
+	end
 end
-timer.Create("MDispatcher.Init",1,1,function()
+
+hook.Add("InitPostEntity", "MDispatcher.Initialize", function()
 	MDispatcher.Initialize()
-	timer.Remove("MDispatcher.Init")
 end)
 
 -- проверенные интервалы по картам
@@ -316,7 +345,7 @@ function MDispatcher.DSCPUnset(ply,station,tagret)
 end
 
 local function AddControlRoom(ply,name)
-    local pos = ply:GetPos()+Vector(0,0,10)
+	local pos = ply:GetPos()+Vector(0,0,10)
 	local ang = ply:EyeAngles()
 	net.Start("MDispatcher.Commands")
 		net.WriteString("cr-add")
@@ -342,6 +371,76 @@ end
 
 local function GetRearTrain(train)
 	return train.WagonList[#train.WagonList]
+end
+
+local function CheckSwitchesState(switches)
+	local checked = true
+	if not switches or switches == "" then return true end
+	switches = string.Explode(",",switches)
+	for k, v in pairs(switches) do
+		local switchname = v:sub(1,-2)
+		local statedesired = v:sub(-1,-1)
+		local switchent = Metrostroi.GetSwitchByName(switchname)
+		if not IsValid(switchent) then continue end
+		local statereal = switchent.AlternateTrack and -1 or 1
+		if statedesired == "+" and statereal != 1 then
+			checked = false
+		end
+		if statedesired == "-" and statereal != -1 then
+			checked = false
+		end
+	end
+	return checked
+end
+
+local function SetSwitchesToRoute(switches)
+	if not switches or switches == "" then return end
+	switches = string.Explode(",",switches)
+	for k, v in pairs(switches) do
+		local statedesired = v:sub(-1,-1)
+		local switchname = v:sub(1,-2)
+		if switchname == "" then continue end
+		local switchent = Metrostroi.GetSwitchByName(switchname)
+		if not IsValid(switchent) then continue end
+		local statereal = switchent.AlternateTrack and -1 or 1
+		if statedesired == "+" and statereal != 1 then
+			switchent:SendSignal("main", nil, true)
+		end
+		if statedesired == "-" and statereal != -1 then
+			switchent:SendSignal("alt", nil, true)
+		end
+	end
+end
+
+function MDispatcher.SignalPass(ply,signal_name,route_name)
+	if not IsValid(ply) then return end
+	local signal = Metrostroi.SignalEntitiesByName[string.upper(signal_name)]
+	if not IsValid(signal) then
+		ply:ChatPrint("Сигнал не найден.")
+		return
+	end
+	if signal.Red and not signal.Occupied then
+		if route_name and route_name != "" and signal.Routes then
+			for k, v in pairs(signal.Routes) do
+				if string.upper(v.RouteName) == string.upper(route_name) then
+					if not CheckSwitchesState(v.Switches) then
+						SetSwitchesToRoute(v.Switches)
+					end
+					ply.pasred = true
+					if signal.GoodInvationSignal > 1 or signal.GoodInvationSignal == -1 then signal.InvationSignal = true end
+					ulx.fancyLog(ply, "#A воспользовался автопроездом сигнала #s.", signal.Name)
+					break
+				end
+			end
+		elseif not route_name or route_name == "" then
+			if not CheckSwitchesState(signal.Routes[signal.Route or 1].Switches) then
+				SetSwitchesToRoute(signal.Routes[signal.Route or 1].Switches)
+			end
+			ply.pasred = true
+			if signal.GoodInvationSignal > 1 or signal.GoodInvationSignal == -1 then signal.InvationSignal = true end
+			ulx.fancyLog(ply, "#A воспользовался автопроездом сигнала #s.", signal.Name)
+		end
+	end
 end
 
 net.Receive("MDispatcher.Commands",function(ln,ply)
@@ -447,7 +546,7 @@ function MDispatcher.GetSchedule(ply)
 		ply:ChatPrint("Вы не можете получить расписание, поскольку ДЦХ на посту!")
 		return
 	end
-    local train = ply:GetTrain()
+	local train = ply:GetTrain()
 	if not IsValid(train) then
 		ply:ChatPrint("Поезд не обнаружен!\nПолучить расписание можно только находясь в кресле машиниста.")
 		return
@@ -497,8 +596,8 @@ function MDispatcher.ClearSchedule(ply)
 end
 
 hook.Add("PlayerEnteredVehicle","MDispatcher.EnteredVehicle",function(ply,veh)
-    local train = veh:GetNW2Entity("TrainEntity")
-    if IsValid(train) then
+	local train = veh:GetNW2Entity("TrainEntity")
+	if IsValid(train) then
 		if train.ScheduleData then
 			net.Start("MDispatcher.ScheduleData")
 				local tbl = util.Compress(util.TableToJSON(train.ScheduleData))
@@ -510,7 +609,7 @@ hook.Add("PlayerEnteredVehicle","MDispatcher.EnteredVehicle",function(ply,veh)
 			net.Start("MDispatcher.ClearSchedule")
 			net.Send(ply)
 		end
-    end
+	end
 end)
 
 local function UpdateTrainSchedule(train, station, arrived)
@@ -695,13 +794,13 @@ local function BuildStationsTable()
 				end
 			else
 			-- для всех остальных карт двойной обход
-                for b, ent2 in pairs(ents.FindByClass("gmod_track_clock_small")) do
-                    if IsValid(ent2) and EntWithinBoundsFromPos(TrackPos, ent2, distance) then
-                        if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then
-                            MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
-                        end
-                    end
-                end
+				for b, ent2 in pairs(ents.FindByClass("gmod_track_clock_small")) do
+					if IsValid(ent2) and EntWithinBoundsFromPos(TrackPos, ent2, distance) then
+						if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then
+							MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+						end
+					end
+				end
 				distance = 750
 				if game.GetMap():find("jar_pll_remastered") then 
 					if LineID == 1 and StationID == 150 then
@@ -719,13 +818,13 @@ local function BuildStationsTable()
 					end
 				end
 				if game.GetMap():find("surfacemetro_w") then distance = 1000 end
-                for b, ent2 in pairs(ents.FindByClass("gmod_track_clock_interval")) do
-                    if IsValid(ent2) and EntWithinBoundsFromPos(TrackPos, ent2, distance) then
-                        if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then
-                            MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
-                        end
-                    end
-                end
+				for b, ent2 in pairs(ents.FindByClass("gmod_track_clock_interval")) do
+					if IsValid(ent2) and EntWithinBoundsFromPos(TrackPos, ent2, distance) then
+						if MDispatcher.Stations[LineID][Path][StationID].Clock == nil then
+							MDispatcher.Stations[LineID][Path][StationID].Clock = ent2
+						end
+					end
+				end
 			end
 			
 			-- фикс для ПЛЛ
