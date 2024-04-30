@@ -54,3 +54,12 @@ end
 local autosched = ulx.command(CATEGORY_NAME,"ulx autosched",ulx.autosched,"!sauto")
 autosched:defaultAccess(ULib.ACCESS_ALL)
 autosched:help("Вкл/выкл авто-перевыдачу раписания")
+
+function ulx.spass(calling_ply, signal_name, route_name)
+	MDispatcher.SignalPass(calling_ply,signal_name,route_name)
+end
+local spass = ulx.command(CATEGORY_NAME,"ulx spass",ulx.spass,"!spass")
+spass:addParam{type=ULib.cmds.StringArg, hint="Светофор", ULib.cmds.optional}
+spass:addParam{type=ULib.cmds.StringArg, hint="Маршрут", ULib.cmds.optional}
+spass:defaultAccess(ULib.ACCESS_ADMIN)
+spass:help("Проезд запрещающего сигнала")
