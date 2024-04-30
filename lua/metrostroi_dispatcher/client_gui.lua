@@ -222,7 +222,7 @@ local function SchedulePreiewForm(ply_tbl,stations,path,start,last)
 	frm:SetSize(280,80+ht-15)
 end
 
-local function DispatcherMenu(routes,stations)
+local function DispatcherMenu(signals,next_signal,routes,stations)
 	-- основной фрейм
 	local frame = vgui.Create("DFrame")
 	frame:SetSize(400,355)
@@ -241,6 +241,13 @@ local function DispatcherMenu(routes,stations)
 	tab:SetSize(frame:GetWide(),frame:GetTall())
 	tab:Dock(FILL)
 
+	local user_panel = vgui.Create("DPanel",tab)
+	user_panel:SetSize(tab:GetWide(),tab:GetTall())
+	user_panel:SetBackgroundColor(Color(0,0,0,0))
+	user_panel:SetVisible(true)
+	tab:AddSheet("Маршруты",user_panel,"icon16/arrow_branch.png",false,false)
+	user_panel:SetVisible(true)
+
 	local disp_panel = vgui.Create("DPanel",tab)
 	disp_panel:SetSize(tab:GetWide(),tab:GetTall())
 	disp_panel:SetBackgroundColor(Color(0,0,0,0))
@@ -253,8 +260,11 @@ local function DispatcherMenu(routes,stations)
 	local dscp_panel = vgui.Create("DPanel",tab)
 	dscp_panel:SetSize(tab:GetWide(),tab:GetTall())
 	dscp_panel:SetBackgroundColor(Color(0,0,0,0))
-	tab:AddSheet("Блок-посты",dscp_panel,"icon16/user_go.png",false,false)
-	
+	dscp_panel:SetVisible(false)
+	if LocalPlayer():query("ulx disp") or LocalPlayer():GetNW2Bool("MDispatcher") or LocalPlayer():GetNW2Bool("MDSCP") then
+		tab:AddSheet("Блок-посты",dscp_panel,"icon16/user_go.png",false,false)
+		dscp_panel:SetVisible(true)
+	end
 	
 	local sched_panel = vgui.Create("DPanel",tab)
 	sched_panel:SetSize(tab:GetWide(),tab:GetTall())
@@ -266,6 +276,7 @@ local function DispatcherMenu(routes,stations)
 	end
 	
 	tab.OnActiveTabChanged = function(self,old,new)
+		if new:GetText() == "Машинист" then frame:SetSize(400,355) end
 		if new:GetText() == "ДЦХ" then frame:SetSize(400,355) end
 		if new:GetText() == "Блок-посты" then frame:SetSize(400,85+cr_height+3) end
 		if new:GetText() == "Расписания" then frame:SetSize(400,300) end
@@ -276,6 +287,119 @@ local function DispatcherMenu(routes,stations)
 	frame.OnClose = function()
 		tab:Remove()
 	end
+	
+	-- Маршруты
+	local lbuser = vgui.Create("DLabel",user_panel)
+	lbuser:SetPos(5,5)
+	lbuser:SetFont("MDispSmallTitle")
+	lbuser:SetColor(Color(255,255,255))
+	lbuser:SetText("Действия с сигналами и маршрутами:")
+	lbuser:SizeToContents()
+	
+	local siglist = vgui.Create("DListView",user_panel)
+	siglist:SetMultiSelect(false)
+	siglist:AddColumn("Сигналы")
+	siglist:SetPos(5,25)
+	siglist:SetSize(170,255)
+	
+	local routelist = vgui.Create("DListView",user_panel)
+	routelist:SetMultiSelect(false)
+	routelist:AddColumn("Маршруты")
+	routelist:SetPos(188,25)
+	routelist:SetSize(180,160)
+	
+	local ropen = vgui.Create("DButton",user_panel)
+	ropen:SetPos(188,195)
+	ropen:SetSize(180,25)
+	ropen:SetText("Открыть маршрут")
+	ropen:SetEnabled(false)
+	ropen.DoClick = function()
+		local selected = siglist:GetSelected()[1]
+		local signal = selected:GetValue(1)
+		selected = routelist:GetSelected()[1]
+		local route = selected:GetValue(1)
+		net.Start("MDispatcher.Commands")
+			net.WriteString("routes-open")
+			net.WriteString(signal)
+			net.WriteString(route)
+		net.SendToServer()
+	end
+	
+	local rclose = vgui.Create("DButton",user_panel)
+	rclose:SetPos(188,225)
+	rclose:SetSize(180,25)
+	rclose:SetText("Закрыть маршрут")
+	rclose:SetEnabled(false)
+	rclose.DoClick = function()
+		local selected = siglist:GetSelected()[1]
+		local signal = selected:GetValue(1)
+		selected = routelist:GetSelected()[1]
+		local route = selected:GetValue(1)
+		net.Start("MDispatcher.Commands")
+			net.WriteString("routes-close")
+			net.WriteString(signal)
+			net.WriteString(route)
+		net.SendToServer()
+	end
+	
+	local spass = vgui.Create("DButton",user_panel)
+	spass:SetPos(188,255)
+	spass:SetSize(180,25)
+	spass:SetText("Проезд запрещающего сигнала")
+	spass:SetEnabled(false)
+	spass.DoClick = function()
+		local selected = siglist:GetSelected()[1]
+		local signal = selected:GetValue(1)
+		selected = routelist:GetSelected()[1]
+		local route = selected:GetValue(1)
+		net.Start("MDispatcher.Commands")
+			net.WriteString("routes-pass")
+			net.WriteString(signal)
+			net.WriteString(route)
+		net.SendToServer()
+	end
+	
+	local function scroll_to(line)
+		if siglist.VBar then
+			local list_height = siglist:GetTall()
+			local line_index = line:GetID()
+			-- local line_size = line:GetTall() -- выдает завышенный размер строки
+			local line_size = 18
+			local y = line_size * (line_index - 1) + line_size / 2 - list_height / 2
+			siglist.VBar:AnimateTo(y, 0.3, 0, 0.5)
+		end
+	end
+	
+	local function show_routes(signal)
+		routelist:Clear()
+		for key, val in pairs(signals) do
+			if val.Name == signal then
+				for k,v in pairs(val.Routes) do
+					routelist:AddLine(v)
+				end
+				ropen:SetEnabled(true)
+				rclose:SetEnabled(true)
+				spass:SetEnabled(true)
+				break
+			end
+		end
+		routelist:SelectFirstItem()
+	end
+	
+	local selected_line
+	for k, v in SortedPairsByMemberValue(signals, "Name") do
+		local line = siglist:AddLine(v.Name)
+		if next_signal == v.Name then
+			line:SetSelected(true)
+			selected_line = line
+			show_routes(next_signal)
+		end
+	end
+	if selected_line ~= nil then scroll_to(selected_line) end
+	siglist.OnRowSelected = function(list,index,row)
+		show_routes(row:GetValue(1))
+	end
+
 	
 	-- ДЦХ
 	local idisp = vgui.Create("DButton",disp_panel)
@@ -705,11 +829,14 @@ end
 net.Receive("MDispatcher.Commands",function()
 	local comm = net.ReadString()
 	if comm == "menu" then
-		local ln = net.ReadUInt(32)
-		local tbl = util.JSONToTable(util.Decompress(net.ReadData(ln)))
+		local ln1 = net.ReadUInt(32)
+		local signals = util.JSONToTable(util.Decompress(net.ReadData(ln1)))
+		local next_signal = net.ReadString()
 		local ln2 = net.ReadUInt(32)
-		local tbl2 = util.JSONToTable(util.Decompress(net.ReadData(ln2)))
-		DispatcherMenu(tbl,tbl2)
+		local routes = util.JSONToTable(util.Decompress(net.ReadData(ln2)))
+		local ln3 = net.ReadUInt(32)
+		local stations = util.JSONToTable(util.Decompress(net.ReadData(ln3)))
+		DispatcherMenu(signals,next_signal,routes,stations)
 	elseif comm == "cr-add" then
 		local cr_name = net.ReadString()
 		local cr_pos = net.ReadVector()

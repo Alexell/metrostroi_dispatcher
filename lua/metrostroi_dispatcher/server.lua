@@ -57,17 +57,19 @@ function MDispatcher.Initialize()
 	end
 	
 	-- загрузка сигналов, имеющих маршрут
-	for k, v in pairs(ents.FindByClass("gmod_track_signal")) do
-		local routes = {}
-		for id, info in pairs(v.Routes) do
-			if info.RouteName and info.RouteName != "" then
-				table.insert(routes, info.RouteName:upper())
+	timer.Simple(2, function()
+		for k, v in pairs(ents.FindByClass("gmod_track_signal")) do
+			local routes = {}
+			for id, info in pairs(v.Routes) do
+				if info.RouteName and info.RouteName != "" then
+					table.insert(routes, info.RouteName:upper())
+				end
+			end
+			if #routes > 0 then
+				table.insert(MDispatcher.Signals, {Name = v.Name, Routes = routes})
 			end
 		end
-		if #routes > 0 then
-			table.insert(MDispatcher.Signals, {Name = v.Name, Routes = routes})
-		end
-	end
+	end)
 end
 
 hook.Add("InitPostEntity", "MDispatcher.Initialize", function()
@@ -227,10 +229,6 @@ end
 
 function MDispatcher.DispatcherMenu(ply)
 	if not IsValid(ply) then return end
-	if not ply:query("ulx disp") and not ply:GetNW2Bool("MDispatcher") and not ply:GetNW2Bool("MDSCP") then
-		ply:ChatPrint("У вас нет доступа к меню диспетчера.")
-		return
-	end
 	local routes = {}
 	for train in pairs(Metrostroi.SpawnedTrains) do
 		if not IsValid(train) then continue end
@@ -240,17 +238,37 @@ function MDispatcher.DispatcherMenu(ply)
 		local route = MDispatcher.GetRouteNumber(train)
 		if not routes[owner:SteamID()] then routes[owner:SteamID()] = {Nick = owner:Nick(), Route = route} end
 	end
+	
+	local next_signal = ""
+	local train = ply:GetTrain()
+	if IsValid(train) then
+		local pos = Metrostroi.TrainPositions[train]
+		if pos then pos = pos[1] end
+		if pos then
+			local sig,sigback = Metrostroi.GetARSJoint(pos.node1, pos.x, Metrostroi.TrainDirections[train], train)
+			if sig then
+				next_signal = sig.Name:upper()
+			end
+		end
+	end
+
 	net.Start("MDispatcher.Commands")
 		net.WriteString("menu")
+		local signals = util.Compress(util.TableToJSON(MDispatcher.Signals))
+		local ln1 = #signals
+		net.WriteUInt(ln1,32)
+		net.WriteData(signals,ln1)
+		net.WriteString(next_signal)
+		
 		routes = util.Compress(util.TableToJSON(routes))
-		local ln = #routes
-		net.WriteUInt(ln,32)
-		net.WriteData(routes,ln)
+		local ln2 = #routes
+		net.WriteUInt(ln2,32)
+		net.WriteData(routes,ln2)
 		
 		local stations = util.Compress(util.TableToJSON(MDispatcher.ClientStations))
-		local ln2 = #stations
-		net.WriteUInt(ln2,32)
-		net.WriteData(stations,ln2)
+		local ln3 = #stations
+		net.WriteUInt(ln3,32)
+		net.WriteData(stations,ln3)
 	net.Send(ply)
 end
 
@@ -428,7 +446,7 @@ function MDispatcher.SignalPass(ply,signal_name,route_name)
 					end
 					ply.pasred = true
 					if signal.GoodInvationSignal > 1 or signal.GoodInvationSignal == -1 then signal.InvationSignal = true end
-					ulx.fancyLog(ply, "#A воспользовался автопроездом сигнала #s.", signal.Name)
+					ulx.fancyLog("#s воспользовался автопроездом сигнала #s.", ply:Nick(), signal.Name)
 					break
 				end
 			end
@@ -438,7 +456,7 @@ function MDispatcher.SignalPass(ply,signal_name,route_name)
 			end
 			ply.pasred = true
 			if signal.GoodInvationSignal > 1 or signal.GoodInvationSignal == -1 then signal.InvationSignal = true end
-			ulx.fancyLog(ply, "#A воспользовался автопроездом сигнала #s.", signal.Name)
+			ulx.fancyLog("#s воспользовался автопроездом сигнала #s.", ply:Nick(), signal.Name)
 		end
 	end
 end
@@ -512,6 +530,26 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 			MDispatcher.SendIntervals(ply,ints)
 		else
 			ply:SetNW2Bool("MDispatcher.ShowIntervals",false)
+		end
+	elseif comm:find("routes") then
+		local signal_name = net.ReadString()
+		local route_name = net.ReadString()
+		if comm:find("open") or comm:find("close") then
+			local signal = Metrostroi.SignalEntitiesByName[signal_name:upper()]
+			for k, v in pairs(signal.Routes) do
+				if v.RouteName:upper() == route_name:upper() then
+					if comm:find("open") then
+						signal:OpenRoute(k)
+						ulx.fancyLog("#s открыл маршрут #s.", ply:Nick(), route_name)
+					else
+						signal:CloseRoute(k)
+						ulx.fancyLog("#s закрыл маршрут #s.", ply:Nick(), route_name)
+					end
+					break
+				end
+			end
+		elseif comm:find("pass") then
+			MDispatcher.SignalPass(ply,signal_name,route_name)
 		end
 	end
 end)
