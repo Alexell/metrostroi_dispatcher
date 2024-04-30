@@ -61,7 +61,7 @@ function MDispatcher.Initialize()
 		for k, v in pairs(ents.FindByClass("gmod_track_signal")) do
 			local routes = {}
 			for id, info in pairs(v.Routes) do
-				if info.RouteName and info.RouteName != "" then
+				if info.RouteName and info.RouteName != "" and info.RouteName:upper() != "GERM" then
 					table.insert(routes, info.RouteName:upper())
 				end
 			end

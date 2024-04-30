@@ -323,6 +323,7 @@ local function DispatcherMenu(signals,next_signal,routes,stations)
 			net.WriteString(signal)
 			net.WriteString(route)
 		net.SendToServer()
+		frame:Close()
 	end
 	
 	local rclose = vgui.Create("DButton",user_panel)
@@ -340,6 +341,7 @@ local function DispatcherMenu(signals,next_signal,routes,stations)
 			net.WriteString(signal)
 			net.WriteString(route)
 		net.SendToServer()
+		frame:Close()
 	end
 	
 	local spass = vgui.Create("DButton",user_panel)
@@ -357,6 +359,7 @@ local function DispatcherMenu(signals,next_signal,routes,stations)
 			net.WriteString(signal)
 			net.WriteString(route)
 		net.SendToServer()
+		frame:Close()
 	end
 	
 	local function scroll_to(line)
