@@ -155,7 +155,7 @@ timer.Create("MDispatcher.SetVisible",1,0,function()
 			MDispatcher.DPanel:SetVisible(false)
 			MDispatcher.DSCPPanel:SetVisible(false)
 		end
-		if PlayerInCabinSeat() and IsValid(LocalPlayer().InMetrostroiTrain) then
+		if PlayerInCabinSeat() and IsValid(LocalPlayer().InMetrostroiTrain) and GetConVar("disp_showpanel"):GetBool() then
 			MDispatcher.SPanel.Route:SetText("Маршрут: "..MDispatcher.GetRouteNumber(LocalPlayer().InMetrostroiTrain))
 			MDispatcher.SPanel:SetVisible(true)
 		else
