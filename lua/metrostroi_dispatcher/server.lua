@@ -432,6 +432,10 @@ end
 
 function MDispatcher.SignalPass(ply,signal_name,route_name)
 	if not IsValid(ply) then return end
+	if MDispatcher.ActiveDispatcher and ply:Nick() ~= MDispatcher.Dispatcher then
+		ply:ChatPrint("Диспетчер на посту!")
+		return
+	end
 	local signal = Metrostroi.SignalEntitiesByName[string.upper(signal_name)]
 	if not IsValid(signal) then
 		ply:ChatPrint("Сигнал не найден.")
@@ -535,6 +539,10 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 		local signal_name = net.ReadString()
 		local route_name = net.ReadString()
 		if comm:find("open") or comm:find("close") then
+			if MDispatcher.ActiveDispatcher and ply:Nick() ~= MDispatcher.Dispatcher then
+				ply:ChatPrint("Диспетчер на посту!")
+				return
+			end
 			local signal = Metrostroi.SignalEntitiesByName[signal_name:upper()]
 			for k, v in pairs(signal.Routes) do
 				if v.RouteName:upper() == route_name:upper() then
