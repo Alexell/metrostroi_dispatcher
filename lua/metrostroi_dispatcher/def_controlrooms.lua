@@ -107,7 +107,7 @@ MDispatcher.DefControlRooms = [[
 			"Name": "Южная"
 		}
 	],
-	"gm_metro_nekrasovskaya_line_v5": [
+	"gm_metro_nekrasovskaya_line_v6": [
 		{
 			"Ang": "{0 -90 0}",
 			"Pos": "[1032.0938 -1216.2813 -13135.9688]",
@@ -166,7 +166,7 @@ MDispatcher.DefControlRooms = [[
 			"Name": "Речная"
 		}
 	],
-	"gm_metro_kalinin_v2": [
+	"gm_metro_kalinin_v3": [
 		{
 			"Ang": "{0 180 0}",
 			"Pos": "[-5627 -8050 10010]",
