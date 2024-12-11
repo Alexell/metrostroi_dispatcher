@@ -1,6 +1,6 @@
 # Metrostroi Dispatcher
 
-**Версия: 4.1**
+**Версия: 4.2**
 
 **Разработчики:** [Alexell](https://steamcommunity.com/profiles/76561198210303223) и [Agent Smith](https://steamcommunity.com/profiles/76561197990364979)
 
@@ -9,6 +9,8 @@
 **Описание:**
 
 Диспетчерский функционал и расписания для машинистов Metrostroi.
+
+**Аддон полностью совместим с [GitHub версией Metrostroi](https://github.com/metrostroi-repo/MetrostroiAddon).**
 
 **Команды:**
 
