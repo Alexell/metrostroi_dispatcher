@@ -19,6 +19,7 @@ MDispatcher.ActiveDispatcher = false
 MDispatcher.Dispatcher = "отсутствует"
 MDispatcher.Interval = "2.00"
 MDispatcher.Stations = {}
+MDispatcher.SignalClass = "gmod_track_signal"
 MDispatcher.Signals = {}
 MDispatcher.ClientStations = {}
 MDispatcher.ControlRooms = {}
@@ -41,8 +42,10 @@ function MDispatcher.Initialize()
 		end
 	end
 	
+	MDispatcher.GetSignalClass()
+	
 	-- изменения в сигналах
-	local ENT = scripted_ents.GetStored("gmod_track_signal").t
+	local ENT = scripted_ents.GetStored(MDispatcher.SignalClass).t
 	local ars_logic = ENT.ARSLogic
 	function ENT:ARSLogic(tim)
 		ars_logic(self, tim)
@@ -58,7 +61,7 @@ function MDispatcher.Initialize()
 	
 	-- загрузка сигналов, имеющих маршрут
 	timer.Simple(2, function()
-		for k, v in pairs(ents.FindByClass("gmod_track_signal")) do
+		for k, v in pairs(ents.FindByClass(MDispatcher.SignalClass)) do
 			local routes = {}
 			for id, info in pairs(v.Routes) do
 				if info.RouteName and info.RouteName != "" and info.RouteName:upper() != "GERM" then
@@ -1004,6 +1007,19 @@ function MDispatcher.GenerateSimpleSched(station_start,path,back_time, station_l
 	back_time = MDispatcher.RoundSeconds(init_time + full_time + 240)
 	full_time = MDispatcher.RoundSeconds(full_time - 10)
 	return sched_massiv, full_time, back_time, holds and holds or {}
+end
+
+-- Определяем класс сигналов на карте
+function MDispatcher.GetSignalClass()
+	local defaultClass = MDispatcher.SignalClass
+	for k, v in pairs(scripted_ents.GetList()) do
+		if v.t.ClassName:find(defaultClass) and not v.t.ClassName:find("controller") and not v.t.ClassName:find("msa") then
+			if v.t.ClassName ~= defaultClass then
+				MDispatcher.SignalClass = v.t.ClassName
+				break
+			end
+		end
+	end
 end
 
 -- Дебаг в консоль сервера
