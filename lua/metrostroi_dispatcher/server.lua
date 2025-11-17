@@ -61,7 +61,7 @@ function MDispatcher.Initialize()
 	
 	-- загрузка сигналов, имеющих маршрут
 	timer.Simple(2, function()
-		for k, v in pairs(ents.FindByClass(MDispatcher.SignalClass)) do
+		for k, v in pairs(ents.FindByClass("gmod_track_signal")) do
 			local routes = {}
 			for id, info in pairs(v.Routes) do
 				if info.RouteName and info.RouteName != "" and info.RouteName:upper() != "GERM" then
@@ -1009,7 +1009,7 @@ function MDispatcher.GenerateSimpleSched(station_start,path,back_time, station_l
 	return sched_massiv, full_time, back_time, holds and holds or {}
 end
 
--- Определяем класс сигналов на карте
+-- Определяем класс сигналов на карте (только для инжектов .t)
 function MDispatcher.GetSignalClass()
 	local defaultClass = MDispatcher.SignalClass
 	for k, v in pairs(scripted_ents.GetList()) do
