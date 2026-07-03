@@ -546,18 +546,12 @@ net.Receive("MDispatcher.Commands",function(ln,ply)
 				ply:ChatPrint("Диспетчер на посту!")
 				return
 			end
-			local signal = Metrostroi.SignalEntitiesByName[signal_name:upper()]
-			for k, v in pairs(signal.Routes) do
-				if v.RouteName:upper() == route_name:upper() then
-					if comm:find("open") then
-						signal:OpenRoute(k)
-						ulx.fancyLog("#s открыл маршрут #s.", ply:Nick(), route_name)
-					else
-						signal:CloseRoute(k)
-						ulx.fancyLog("#s закрыл маршрут #s.", ply:Nick(), route_name)
-					end
-					break
-				end
+			if comm:find("open") then
+				route_name = route_name:upper()
+				ply:ConCommand("ulx sopen "..route_name)
+			else
+				route_name = route_name:upper()
+				ply:ConCommand("ulx sclose "..route_name)
 			end
 		elseif comm:find("pass") then
 			MDispatcher.SignalPass(ply,signal_name,route_name)
